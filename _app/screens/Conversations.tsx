@@ -444,7 +444,7 @@ export function Screen_conversation({ navigation, route }: { navigation: any, ro
         }
         return data;
     };
-
+    console.log(getUser2Deets)
     const uploadWithPresigned = async (descriptor: UploadDescriptor): Promise<UploadedMedia> => {
         // Fix content type for Android audio files
         let contentType = descriptor.type;
@@ -1021,7 +1021,7 @@ export function Screen_conversation({ navigation, route }: { navigation: any, ro
     const pendingTimeLabel = (pendingPlayback && pendingLabels.durationLabel)
         ? `${pendingLabels.posLabel} / ${pendingLabels.durationLabel}`
         : pendingLabels.posLabel;
-
+    console.log(img_server + getUser2Deets?.image?.p)
     return (<>
         <View style={[styles.container, {}]}>
 
@@ -1032,10 +1032,10 @@ export function Screen_conversation({ navigation, route }: { navigation: any, ro
                     style={{ flex: 1 }} >
 
                     <View style={{ paddingVertical: 5 }}>
-                        <Pressable onPress={() => {
-                            navigation.push(namer.navigation.peoplesOnePerson, { alreadyLiked: true, likedMatchedId: funt.matchId, getOnePersonId: getUser2Deets?.uid });
-                        }} style={{ backgroundColor: '#f3f6ff', borderRadius: 14, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                            {getUser2Deets?.image?.p ? <FastImage source={{ uri: img_server + getUser2Deets?.image?.p, cache: FastImage.cacheControl.cacheOnly }} style={{ width: 52, height: 52, borderRadius: 12 }} /> : <View style={{ width: 52, height: 52, borderRadius: 12, backgroundColor: '#d7def5' }} />}
+                        <Pressable onPress={() => { navigation.push(namer.navigation.peoplesOnePerson, { alreadyLiked: true, likedMatchedId: funt.matchId, getOnePersonId: getUser2Deets?.uid }); }}
+                            style={{ backgroundColor: '#f3f6ff', borderRadius: 14, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                            {getUser2Deets?.image?.p ? <FastImage source={{ uri: img_server + getUser2Deets?.image?.p, cache: FastImage.cacheControl.immutable }}
+                                style={{ width: 80, height: 80, borderRadius: 50 }} /> : <View style={{ width: 52, height: 52, borderRadius: 12, backgroundColor: '#d7def5' }} />}
                             <View style={{ flex: 1, gap: 4 }}>
                                 <Text style={{ fontSize: 16, fontWeight: 'bold', textTransform: "capitalize" }}>{getUser2Deets?.fullname || "Your match"}</Text>
                                 <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
