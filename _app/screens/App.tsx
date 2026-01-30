@@ -192,12 +192,7 @@ const MainApp: React.FC = () => {
 
 
   if (getAllGood === false) {
-    return <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}><LottieView
-      source={resourceMap.lottie.infinityLoading}
-      autoPlay
-      loop
-      style={{ width: 220, height: 220 }}
-    /></View>
+    return <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#fff" }}><LottieView source={resourceMap.lottie.infinityLoading} autoPlay loop style={{ width: 220, height: 220 }} /></View>
   }
 
 

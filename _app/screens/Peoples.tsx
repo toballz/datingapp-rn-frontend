@@ -270,8 +270,8 @@ export function Peoples_Screen({ route, navigation }: { route: any, navigation: 
             </View>,
 
             headerRight: () => !functs.onePersonProfile && (
-                <View style={{ paddingRight: 10, flexDirection: "row", gap: 15, alignItems: "center" }}>
-                    <Pressable style={{ gap: 3 }} onPress={() => {
+                <View style={{ paddingRight: 10, flexDirection: "row", gap: 14, alignItems: "center" }}>
+                    {getSkippedPeoples.length > 0 && <Pressable style={{ gap: 3 }} onPress={() => {
                         bottomSheetRef_secondview.current?.open({
                             onClose: () => { },
                             sheetHeight: .5,
@@ -279,7 +279,7 @@ export function Peoples_Screen({ route, navigation }: { route: any, navigation: 
                         });
                     }}>
                         <MIcon name="backup-restore" size={30} color="#204586ff" />
-                    </Pressable>
+                    </Pressable>}
                     <Pressable style={{ gap: 3 }} onPress={() => {
 
                         bottomSheetRef_location.current?.open({
@@ -303,7 +303,7 @@ export function Peoples_Screen({ route, navigation }: { route: any, navigation: 
                     </Pressable>
                 </View>),
         });
-    }, [getPeopleToMatch]);
+    }, [getPeopleToMatch, getSkippedPeoples]);
 
     useFocusEffect(React.useCallback(() => {
         _http_request({
@@ -627,7 +627,7 @@ export function Peoples_Screen({ route, navigation }: { route: any, navigation: 
                                 lottieRef.current?.play();
                                 setLoading(true);
                                 peoples_action('like', 0, false).then(async () => {
-                                    await sleep(500);
+                                    await sleep(700);
                                     setLoading(false);
                                     lottieRef.current?.reset();
                                 })
@@ -655,10 +655,8 @@ export function Peoples_Screen({ route, navigation }: { route: any, navigation: 
                 <LocationContent />
             </CBottomSheet>
 
-            <Modal
-                visible={showItsAMatchModal}
-                transparent
-                animationType="fade"
+            {/* ITS a matCH */}
+            <Modal visible={showItsAMatchModal} transparent animationType="fade"
                 onRequestClose={() => {
                     setShowItsAMatchModal(false);
                     if (functs.onePersonProfile) {
