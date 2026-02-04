@@ -149,7 +149,7 @@ export const __init__app = async ({ doAgain = false }: { doAgain?: boolean } = {
   if (doAgain || !Array.isArray(llStorage.currentProfile.get()) && currentSession?.x_omi_payload_hash) { await llStorage.currentProfile.load(); ro += "userProfile "; };
 }
 
- 
+
 // 
 export const displsyNotification = async (title: string, body?: string) => {
   try {
@@ -193,15 +193,13 @@ export const logReport = ({ type, extra, useraction, url, logMessage, stackTrace
         "type": type,
         "_error": {
           "url": url,
+          "useraction": useraction,
           "description": logMessage,
           "extras": extra,
-          "stackMessage": stackTrace,
+          "stackMessage": stackTrace
         },
+        "user": { "reporteduser": reporteduserId },
         "device": llStorage.deviceSpec.get(),
-        "user": {
-          "reporteduser": reporteduserId,
-          "useraction": useraction,
-        },
         "app": {
           "version_app": DeviceInfo.getVersion(),
           "version_bundle": appjson.appversion,
