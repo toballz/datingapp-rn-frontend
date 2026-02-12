@@ -228,7 +228,7 @@ export function Screen_profile({ navigation }: { navigation: any }) {
                                     end={{ x: 1, y: 1 }}>
                                     <View style={{ padding: 16 }}>
                                         <View style={stylesx.cardHeader}>
-                                            <Text style={stylesx.cardTitle}>{tier.name}</Text>
+                                            <Text style={stylesx.cardTitle}>{tier?.name}</Text>
                                             <MIcon name={icon[key]} size={20} color="#fff" />
                                         </View>
 

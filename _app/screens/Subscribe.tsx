@@ -1,57 +1,82 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, Animated, Dimensions } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import IIcon from 'react-native-vector-icons/Ionicons';
 import { _http_request, hostServer, llStorage } from '../funcs/functions';
-import { Loaderx } from '../funcs/functions_stateful';
+import { Loaderx, bottomsheet_renderBackdrop } from '../funcs/functions_stateful';
+import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Colors for tiers - will use dynamically based on tier count
 const TIER_COLORS = ['#F25F7F', '#D4AF37', '#5B8DEF', '#34C759'];
 
 
 export const Screen_Subscribe = ({ route, navigation }: { route: any; navigation: any }) => {
-  const __product_MAPPER = llStorage.purchasing_product?.get()?.mainsub;
+  const __product_MAPPER_mainsub = llStorage.purchasing_product?.get()?.mainsub;
 
   // Get all tier keys from the mapper
-  const tierKeys = Object.keys(__product_MAPPER || {});
+  const tierKeys = Object.keys(__product_MAPPER_mainsub || {});
 
   // Get profile data
   const getProfile = llStorage.currentProfile.get()?.currentUser;
   const activeSubscription = getProfile?.user_effect?.has_active_subscription ?? false;
   const userCurrentTier = getProfile?.user_effect?.subscription_plan;
 
+  const getTierKeyByName = (planName?: string) => {
+    if (!planName) return '';
+    const normalized = String(planName).toLowerCase();
+    return (
+      tierKeys.find((key) => {
+        const tierItems = __product_MAPPER_mainsub?.[key] || [];
+        const name = tierItems[0]?.name;
+        return String(name).toLowerCase() === normalized;
+      }) || ''
+    );
+  };
+
   // Initialize selected tier based on user's current subscription
   const [selectedTier, setSelectedTier] = useState<string>(() => {
-    if (activeSubscription && userCurrentTier && tierKeys.includes(userCurrentTier)) {
-      return userCurrentTier;
+    if (activeSubscription && userCurrentTier) {
+      const mapped = getTierKeyByName(userCurrentTier);
+      if (mapped) return mapped;
     }
     return route?.params?.tab || (tierKeys[0] || '');
   });
 
   // Initialize selected billing cycle based on available options
   const [selectedDuration, setSelectedDuration] = useState<string>(() => {
-    const tierItems = __product_MAPPER?.[selectedTier] || [];
-    return tierItems[0]?.description || '';
+    const tierItems = __product_MAPPER_mainsub?.[selectedTier] || [];
+    return tierItems[0]?.interval_days ? String(tierItems[0].interval_days) : '';
   });
+
+  const paymentSheetRef = useRef<BottomSheet>(null);
+  const paymentSheetSnap = useMemo(() => ['40%'], []);
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const { width: screenWidth } = Dimensions.get('window');
+  const cycleItemWidth = Math.min(180, Math.max(140, Math.round(screenWidth * 0.45)));
+  const cycleSidePadding = Math.max(16, Math.round((screenWidth - cycleItemWidth) / 2));
 
   // Build tier data dynamically
   const tiers = useMemo(() => {
     const tierData: Record<string, any> = {};
 
     tierKeys.forEach((tierKey, index) => {
-      const tierItems = __product_MAPPER?.[tierKey] || [];
+      const tierItems = __product_MAPPER_mainsub?.[tierKey] || [];
+      const tierMeta = tierItems[0] || {};
 
-      // Group prices by description
+      // Group prices by interval_days
       const prices: Record<string, string> = {};
       tierItems.forEach((item: any) => {
-        prices[item.description] = item.price;
+        if (item?.interval_days) {
+          prices[String(item.interval_days)] = String(item.price);
+        }
       });
 
       // Generate features based on tier
-      const features = generateFeatures(tierKey);
+      const features = generateFeatures(String(tierMeta?.name ?? tierKey));
 
       tierData[tierKey] = {
-        name: tierKey.toUpperCase(),
+        name: (tierMeta?.name ?? tierKey).toUpperCase(),
         color: TIER_COLORS[index] || '#F25F7F',
         features,
         prices,
@@ -60,23 +85,25 @@ export const Screen_Subscribe = ({ route, navigation }: { route: any; navigation
     });
 
     return tierData;
-  }, [__product_MAPPER]);
+  }, [__product_MAPPER_mainsub]);
 
   // Update selected duration when tier changes
   useEffect(() => {
-    const tierItems = __product_MAPPER?.[selectedTier] || [];
+    const tierItems = __product_MAPPER_mainsub?.[selectedTier] || [];
     if (tierItems.length > 0) {
-      setSelectedDuration(tierItems[0]?.description);
+      setSelectedDuration(tierItems[0]?.interval_days ? String(tierItems[0].interval_days) : '');
     }
   }, [selectedTier]);
 
-  const handleSubscribe = () => {
+  const handleSubscribe = (paymentMethod: 'iap' | 'card') => {
     const actionName = (globalThis as any)?.http_namer?.pushSubscribe ?? 'pushSubscribe';
     Loaderx.show();
 
     // Find the selected product item
-    const tierItems = __product_MAPPER?.[selectedTier] || [];
-    const selectedItem = tierItems.find((item: any) => item.description === selectedDuration);
+    const tierItems = __product_MAPPER_mainsub?.[selectedTier] || [];
+    const selectedItem = tierItems.find(
+      (item: any) => String(item.interval_days) === selectedDuration
+    );
 
     if (!selectedItem) {
       Loaderx.hide();
@@ -91,7 +118,8 @@ export const Screen_Subscribe = ({ route, navigation }: { route: any; navigation
         action: actionName,
         tier: selectedTier,
         whentype: selectedDuration,
-        product_id: selectedItem.id
+        product_id: selectedItem.sku,
+        payment_method: paymentMethod
       }
     }).then((fg: any) => {
       if (fg?.code === 200) {
@@ -108,20 +136,23 @@ export const Screen_Subscribe = ({ route, navigation }: { route: any; navigation
     });
   };
 
+  const openPaymentSheet = () => {
+    if (!selectedDuration) return;
+    paymentSheetRef.current?.snapToIndex(0);
+  };
+
   // Get available billing cycles for selected tier
   const getAvailableCycles = () => {
-    const tierItems = __product_MAPPER?.[selectedTier] || [];
-    return tierItems.map((item: any) => item.description);
+    const tierItems = __product_MAPPER_mainsub?.[selectedTier] || [];
+    return tierItems.map((item: any) => String(item.interval_days));
   };
+
+  const selectedPrice = tiers[selectedTier]?.prices?.[selectedDuration] || '';
+  const selectedTierName = tiers[selectedTier]?.name || '';
 
   return (
     <LinearGradient colors={['#0f0b14', '#171126', '#0f111a']} style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        <View style={styles.hero}>
-          <Text style={styles.heroKicker}>Upgrade</Text>
-          <Text style={styles.heroTitle}>Unlock more matches & visibility</Text>
-          <Text style={styles.heroSubtitle}>Pick the plan that matches your pace.</Text>
-        </View>
 
         <View style={styles.tierRow}>
           {tierKeys.map((tierKey) => {
@@ -185,44 +216,116 @@ export const Screen_Subscribe = ({ route, navigation }: { route: any; navigation
         </View>
 
         <Text style={styles.sectionTitle}>Billing cadence</Text>
-        <View style={styles.cycleRow}>
-          {getAvailableCycles().map((cycle: string) => {
+        <Animated.ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={[styles.cycleRow, { paddingHorizontal: cycleSidePadding }]}
+          snapToInterval={cycleItemWidth + 12}
+          decelerationRate="fast"
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+            { useNativeDriver: true }
+          )}
+          scrollEventThrottle={16}
+        >
+          {getAvailableCycles().map((cycle: string, index: number) => {
             const isSelected = selectedDuration === cycle;
+            const inputRange = [
+              (index - 1) * (cycleItemWidth + 12),
+              index * (cycleItemWidth + 12),
+              (index + 1) * (cycleItemWidth + 12),
+            ];
+            const scale = scrollX.interpolate({
+              inputRange,
+              outputRange: [0.92, 1.06, 0.92],
+              extrapolate: 'clamp',
+            });
+            const opacity = scrollX.interpolate({
+              inputRange,
+              outputRange: [0.7, 1, 0.7],
+              extrapolate: 'clamp',
+            });
+
             return (
-              <TouchableOpacity
-                key={cycle}
-                onPress={() => setSelectedDuration(cycle)}
-                style={[
-                  styles.cyclePill,
-                  isSelected && { backgroundColor: tiers[selectedTier].color, borderColor: tiers[selectedTier].color },
-                ]}
-              >
-                <Text style={[styles.cycleText, isSelected && styles.cycleTextSelected]}>
-                  {cycle.charAt(0).toUpperCase() + cycle.slice(1)}
-                </Text>
-                <Text style={[styles.cyclePrice, isSelected && styles.cycleTextSelected]}>
-                  {tiers[selectedTier]?.prices[cycle] || ''}
-                </Text>
-              </TouchableOpacity>
+              <Animated.View key={cycle} style={{ transform: [{ scale }], opacity }}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedDuration(cycle);
+                    openPaymentSheet();
+                  }}
+                  style={[
+                    styles.cyclePill,
+                    { width: cycleItemWidth, marginRight: 12 },
+                    isSelected && { backgroundColor: tiers[selectedTier].color, borderColor: tiers[selectedTier].color },
+                  ]}
+                >
+                  <Text style={[styles.cycleText, isSelected && styles.cycleTextSelected]}>
+                    {cycle} days
+                  </Text>
+                  <Text style={[styles.cyclePrice, isSelected && styles.cycleTextSelected]}>
+                    {tiers[selectedTier]?.prices[cycle] || ''}
+                  </Text>
+                </TouchableOpacity>
+              </Animated.View>
             );
           })}
-        </View>
+        </Animated.ScrollView>
 
-        <TouchableOpacity
-          activeOpacity={0.92}
-          style={[styles.ctaButton, { backgroundColor: tiers[selectedTier]?.color }]}
-          onPress={handleSubscribe}
-        >
-          <Text style={styles.ctaText}>Start {tiers[selectedTier]?.name}</Text>
-          <Text style={styles.ctaSubtext}>
-            {tiers[selectedTier]?.prices[selectedDuration] || ''}
-          </Text>
-        </TouchableOpacity>
 
         <Text style={styles.disclaimer}>
           Payments are charged to your account. Auto-renews unless canceled 24 hours before renewal.
         </Text>
       </ScrollView>
+
+      <BottomSheet
+        ref={paymentSheetRef}
+        index={-1}
+        snapPoints={paymentSheetSnap}
+        backdropComponent={bottomsheet_renderBackdrop}
+        enablePanDownToClose
+      >
+        <BottomSheetView style={styles.sheetContainer}>
+          <SafeAreaView edges={['bottom']}>
+            <Text style={styles.sheetTitle}>Choose payment method</Text>
+            <Text style={styles.sheetSubtitle}>
+              {selectedTierName} • {selectedDuration} days • {selectedPrice}
+            </Text>
+
+            <View style={styles.sheetDetails}>
+              <View style={styles.sheetRow}>
+                <Text style={styles.sheetLabel}>Plan</Text>
+                <Text style={styles.sheetValue}>{selectedTierName}</Text>
+              </View>
+              <View style={styles.sheetRow}>
+                <Text style={styles.sheetLabel}>Billing cadence</Text>
+                <Text style={styles.sheetValue}>{selectedDuration} days</Text>
+              </View>
+              <View style={styles.sheetRow}>
+                <Text style={styles.sheetLabel}>Price</Text>
+                <Text style={styles.sheetValue}>{selectedPrice || '—'}</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.sheetButton, styles.sheetButtonPrimary]}
+              onPress={() => handleSubscribe('iap')}
+            >
+              <Text style={styles.sheetButtonTextPrimary}>Pay with in-app purchase</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.sheetButton, styles.sheetButtonSecondary]}
+              onPress={() => handleSubscribe('card')}
+            >
+              <Text style={styles.sheetButtonTextSecondary}>Pay with credit card</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.sheetCancel} onPress={() => paymentSheetRef.current?.close()}>
+              <Text style={styles.sheetCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </SafeAreaView>
+        </BottomSheetView>
+      </BottomSheet>
     </LinearGradient>
   );
 };
@@ -256,10 +359,6 @@ const generateFeatures = (tierKey: string): string[] => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContainer: { padding: 20, paddingBottom: 40 },
-  hero: { marginBottom: 24 },
-  heroKicker: { color: '#9ca3af', fontSize: 12, letterSpacing: 1 },
-  heroTitle: { color: '#fff', fontSize: 26, fontWeight: '700', marginTop: 6 },
-  heroSubtitle: { color: '#cbd5e1', fontSize: 14, marginTop: 6 },
   tierRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },
   tierCard: {
     flex: 1,
@@ -288,7 +387,7 @@ const styles = StyleSheet.create({
   benefitIcon: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   benefitText: { color: '#e5e7eb', fontSize: 15, flex: 1 },
   emptyBenefit: { color: '#9ca3af', fontSize: 14 },
-  cycleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 24 },
+  cycleRow: { flexDirection: 'row', marginBottom: 24 },
   cyclePill: {
     flexBasis: '48%',
     padding: 12,
@@ -304,4 +403,30 @@ const styles = StyleSheet.create({
   ctaText: { color: '#0f0b14', fontSize: 17, fontWeight: '800' },
   ctaSubtext: { color: '#0f0b14', fontSize: 13, marginTop: 4 },
   disclaimer: { color: '#9ca3af', fontSize: 12, lineHeight: 16, textAlign: 'center' },
+
+  sheetContainer: { padding: 20 },
+  sheetTitle: { color: '#111827', fontSize: 18, fontWeight: '700' },
+  sheetSubtitle: { color: '#6b7280', fontSize: 13, marginTop: 6, marginBottom: 12 },
+  sheetDetails: {
+    backgroundColor: '#f3f4f6',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+  },
+  sheetRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  sheetLabel: { color: '#6b7280', fontSize: 12 },
+  sheetValue: { color: '#111827', fontSize: 13, fontWeight: '700' },
+  sheetButton: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  sheetButtonPrimary: { backgroundColor: '#111827' },
+  sheetButtonSecondary: { backgroundColor: '#f3f4f6', borderWidth: 1, borderColor: '#e5e7eb' },
+  sheetButtonTextPrimary: { color: '#ffffff', fontSize: 15, fontWeight: '700' },
+  sheetButtonTextSecondary: { color: '#111827', fontSize: 15, fontWeight: '700' },
+  sheetCancel: { alignItems: 'center', marginTop: 6 },
+  sheetCancelText: { color: '#6b7280', fontSize: 14 },
 });
