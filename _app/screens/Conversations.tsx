@@ -960,7 +960,7 @@ export function Screen_conversation({ navigation, route }: { navigation: any, ro
                 const jy = llStorage.currentProfile.get()?.currentUser?.user_fullname ?? "";
                 setConvoSendingstatus("sent");
                 if (getUser2Deets?.uid) {
-                    SocketClient.emit("/push/" + getUser2Deets?.uid, {
+                    SocketClient.emit("/pushUser/" + getUser2Deets?.uid, {
                         matchId: funt.matchId,
                         type: "single-convo",
                         payload:

@@ -11,10 +11,12 @@ import notifee from '@notifee/react-native';
 import { Asset, ImageLibraryOptions, launchImageLibrary } from 'react-native-image-picker';
 import { Toastx } from './customNotification';
 import { SocketClient } from './socket_realtimeData';
+import { createNavigationContainerRef } from '@react-navigation/native';
 
 // Define API URL
 export const hostServer = () => {
   let h_0 = "https://api.q1-site.site"; //live server
+  // h_0 = "http://192.168.12.145:2000"; 
   //return h_0;
   if (Platform.OS === "android" && DeviceInfo.isEmulatorSync()) {
     h_0 = "http://10.0.2.2:2000"; // if android emulator
@@ -22,6 +24,7 @@ export const hostServer = () => {
   return h_0;
 }
 export const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+export const navigationRef = createNavigationContainerRef<any>();
 
 
 // Helper functions for encoding/decoding
@@ -138,7 +141,7 @@ export const help = {
 };
 
 
-export const __init__app = async ({ doAgain = false, navigationRef = null }: { doAgain?: boolean, navigationRef?: any }): Promise<void> => {
+export const __init__app = async ({ doAgain = false }: { doAgain?: boolean }): Promise<void> => {
   const currentSession = sessionManager.getCurrentSession();
   let ro = "";
 
@@ -159,6 +162,7 @@ export const __init__app = async ({ doAgain = false, navigationRef = null }: { d
       const retrivedData = data?.message;
       if (data.event === 'message') {
         if (retrivedData?.type !== "single-convo") return;
+        console.log(66, retrivedData?.type)
         /*
         {
             "type":"single-convo",
@@ -170,9 +174,8 @@ export const __init__app = async ({ doAgain = false, navigationRef = null }: { d
         } 
         */
         if (matchId === retrivedData?.matchId) {
-          if (navigationRef.isReady()) {
-            navigationRef.setParams({ realtimedata: retrivedData?.payload });
-          }
+          if (navigationRef.isReady()) navigationRef.setParams({ realtimedata: retrivedData?.payload });
+
         } else {
           const nmessage = (retrivedData?.payload?.firstName ?? "Someone") + " has messaged you";
           if (AppState.currentState === 'active') {
@@ -182,9 +185,7 @@ export const __init__app = async ({ doAgain = false, navigationRef = null }: { d
               message: "Tap to view message",
               type: 'info',
               onPress: () => {
-                if (navigationRef.isReady()) {
-                  navigationRef.navigate(namer.navigation.conversation, { matchId: retrivedData?.matchId });
-                }
+                if (navigationRef.isReady()) navigationRef.navigate(namer.navigation.conversation, { matchId: retrivedData?.matchId });
               }
             });
           } else if (AppState.currentState === 'background' || AppState.currentState === 'inactive') {
@@ -227,13 +228,6 @@ export const sleep = (ms: number) => new Promise((r: any) => setTimeout(r, ms));
 
 // Log function for debugging
 export const logReport = ({ type, extra, useraction, url, logMessage, stackTrace, reporteduserId }: { type: string, extra?: string, useraction: string, url?: string, logMessage: string, stackTrace?: any, reporteduserId?: string }): void => {
-  const saveLogToLocal = async (stringify: string) => {
-    return;
-    const aja = await AsyncStorage.getItem(namer.storage.applog) ?? "[]";
-    const aju = JSON.parse(aja);
-    aju.push(stringify);
-    await AsyncStorage.setItem(namer.storage.applog, aju);
-  }
 
   (async () => {
     try {
@@ -280,7 +274,6 @@ export const logReport = ({ type, extra, useraction, url, logMessage, stackTrace
       } catch (e: any) {
         console.log("logReport fetch error:", e.message);
         logD._error.extras += " |||| logReport fetch error: " + e.message;
-        saveLogToLocal(JSON.stringify(logD));
       }
     } catch (error: any) {
       console.error("logReport: fetching device info", error.message);

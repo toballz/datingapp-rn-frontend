@@ -21,7 +21,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Zz_nofilee } from './zz_nofilee';
 import { namer, resourceMap } from '../funcs/static';
 import { Screen_Subscribe } from './Subscribe';
-import { __init__app, logReport } from '../funcs/functions';
+import { __init__app, logReport, navigationRef } from '../funcs/functions';
 import { SocketClient } from '../funcs/socket_realtimeData';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -35,7 +35,6 @@ import { Auth_Signup } from './Auth_Signup';
 // Type definitions for props if needed
 const Stack = createStackNavigator<any>();
 const TabBottom = createBottomTabNavigator<any>();
-const navigationRef = createNavigationContainerRef<any>();
 
 const MainApp: React.FC = () => {
   const [currentSession, setCurrentSession] = useState<SessionTypes | null>(sessionManager.getCurrentSession());
@@ -107,7 +106,7 @@ const MainApp: React.FC = () => {
 
 
     initializeApp().then(async () => {
-      await __init__app({ navigationRef });
+      await __init__app({});
 
     }).finally(() => {
       setAllGood(true);
