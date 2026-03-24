@@ -15,7 +15,7 @@ export function Zz_devv({ route, navigation }: { route: any, navigation: any }) 
             <Text style={{ backgroundColor: "#7eb400", color: "#fffdfd", padding: 10 }}>Debug Tools</Text>
             <ScrollView style={[{ flex: 1 }]} showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 10, gap: 20 }}>
                 <Pressable style={modernStyles.dangerSection} onPress={async () => {
-                    await __init__app( );
+                    await __init__app();
                     await cacheStorage.getCurrentUserProfile(true);
                     Toastx.show({ type: "info", message: "_ _init__app updated successfully" });
                 }}>
@@ -26,9 +26,13 @@ export function Zz_devv({ route, navigation }: { route: any, navigation: any }) 
                     <Text>Image url: {__MAPPER?.img_domain[0]}</Text>
                 </Pressable>
 
+                <Pressable style={modernStyles.dangerSection} onPress={async () => { console.log("uyuu", await cacheStorage.getProducts(true)) }}>
+                    <Text>getProducts</Text>
+                </Pressable>
+
                 <Pressable style={modernStyles.dangerSection} onPress={async () => {
                     Linking.openURL(
-                        hostServer() + '/admin/admin_user_detail.php?id=' + cacheStorage.getCurrentUserProfile()?.user_id
+                        hostServer() + '/admin/admin_user_detail.php?id=' + (await cacheStorage.getCurrentUserProfile())?.user_id
                     );
                 }}>
                     <Text>Profile admin url:{"\n"}{hostServer()}</Text>

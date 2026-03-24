@@ -387,37 +387,109 @@ const PhotoGrid = React.memo(({
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 
 export function Screen_editprofile({ navigation }: { navigation: any }) {
-    const getProfile = cacheStorage.getCurrentUserProfile();
-    const __MAPPER = llStorage.CONFIG.get()?.mapper;
     const headerHeight = useHeaderHeight();
 
-    // ── Profile state ──────────────────────────────────────────────────────
-    const [getImages, setImages] = useState<PhotoItem[]>(getProfile?.user_image ?? []);
-    const [getId] = useState<string | null>(getProfile?.user_id ?? null);
-    const [getFullname] = useState<string>(getProfile?.user_fullname ?? '');
-    const [getAge] = useState<string>(getProfile?.user_bio_dob ?? '');
-    const [getAboutText, setAboutText] = useState<string>(getProfile?.user_bio_about ?? '');
-    const [getGender, setGender] = useState<string>(getProfile?.user_bio_gender ?? '');
-    const [getLocation] = useState<string>(getProfile?.user_location?.city ?? '');
-    const [getChildren, setChildren] = useState<string>(getProfile?.user_bio_children ?? '');
-    const [getSmoking, setSmoking] = useState<string>(getProfile?.user_bio_smoking ?? '');
-    const [getDrinking, setDrinking] = useState<string>(getProfile?.user_bio_drinking ?? '');
-    const [getRelationshipGoal, setRelationshipGoal] = useState<string>(getProfile?.user_bio_relationshipgoal ?? '');
-    const [getHomeTown, setHomeTown] = useState<string>(getProfile?.user_bio_hometown ?? '');
-    const [getSchoolAttended, setSchoolAttended] = useState<string>(getProfile?.user_bio_schoolattended ?? '');
-    const [getHighEducation, setHighEducation] = useState<string>(getProfile?.user_bio_highesteducation ?? '');
-    const [getEthnicity, setEthnicity] = useState<string>(getProfile?.user_bio_ethnicity ?? '');
-    const [getLanguages, setLanguages] = useState<string>(getProfile?.user_bio_language ?? '');
-    const [getPets, setPets] = useState<string>(getProfile?.user_bio_haspet ?? '');
-    const [getBodyType, setBodyType] = useState<string>(getProfile?.user_bio_bodytype ?? '');
-    const [getReligion, setReligion] = useState<string>(getProfile?.user_bio_religion ?? '');
-    const [getPoliticalViews, setPoliticalViews] = useState<string>(getProfile?.user_bio_politicalview ?? '');
+    const [getProfile, setProfile] = useState<any>(null);
+    const __MAPPER = llStorage.CONFIG.get()?.mapper;
+
+    const imageDomain = __MAPPER?.img_domain?.[0] ?? '';
+
+    const [getProfileEdit, setProfileEdit] = useState({
+        images: [] as PhotoItem[],
+
+        // Basic info
+        id: null as string | null,
+        fullname: "",
+        age: null as number | null,
+        about: "",
+        city: "",
+
+        // Preferences/Attributes
+        gender: null as string | null,
+        relationshipgoal: null as string | null,
+        children: null as string | null,
+        smoking: null as string | null,
+        drinking: null as string | null,
+        pets: null as string | null,
+        highEducation: null as string | null,
+        ethnicity: null as string | null,
+        bodytype: null as string | null,
+        religion: null as string | null,
+        politicalview: null as string | null,
+
+        // Text fields
+        hometown: "",
+        schoolattended: "",
+        languages: [] as string[],
+    });
+
+    // ── Profile state ──────────────────────────────────────────────────────   
     const [getPrompts, setPrompts] = useState<Array<{ q: string; a: string; d: string }>>(
         Array.isArray(getProfile?.user_bio_prompt) ? getProfile.user_bio_prompt : []
     );
     const [getInterests, setInterests] = useState<string[]>(
         Array.isArray(getProfile?.user_bio_interests) ? getProfile.user_bio_interests : []
     );
+
+
+
+    // profile
+    useEffect(() => {
+        let mounted = true;
+        (async () => {
+            try {
+                const [profile] = await Promise.all([cacheStorage.getCurrentUserProfile()]);
+
+                if (mounted && profile) {
+                    setProfile(profile);
+                    setProfileEdit({
+                        // Photos
+                        images: profile?.profile?.images ?? [],
+
+                        // Basic info
+                        id: profile?.profile?.id ?? null,
+                        fullname: profile?.profile?.fullname ?? '',
+                        age: profile?.profile?.age ?? null,
+                        about: profile?.user_bio_about ?? '',
+                        city: profile?.user_location?.city ?? '',
+
+                        // Preferences/Attributes
+                        gender: profile?.user_bio_gender ?? null,
+                        relationshipgoal: profile?.user_bio_relationshipgoal ?? null,
+                        children: profile?.user_bio_children ?? null,
+                        smoking: profile?.user_bio_smoking ?? null,
+                        drinking: profile?.user_bio_drinking ?? null,
+                        pets: profile?.user_bio_haspet ?? null,
+                        highEducation: profile?.user_bio_highesteducation ?? null,
+                        ethnicity: profile?.user_bio_ethnicity ?? null,
+                        bodytype: profile?.user_bio_bodytype ?? null,
+                        religion: profile?.user_bio_religion ?? null,
+                        politicalview: profile?.user_bio_politicalview ?? null,
+
+                        // Text fields
+                        hometown: profile?.user_bio_hometown ?? '',
+                        schoolattended: profile?.user_bio_schoolattended ?? '',
+                        languages: profile?.user_bio_language ?? [],
+                    });
+                    setPrompts(Array.isArray(profile?.user_bio_prompt) ? profile.user_bio_prompt : []);
+                    setInterests(Array.isArray(profile?.user_bio_interests) ? profile.user_bio_interests : []);
+                }
+            } catch (error) {
+                console.error("Error loading profile:", error);
+                if (mounted) {
+                    setProfile(null);
+                }
+            }
+        })();
+
+        return () => { mounted = false; };
+    }, []);
+    const updateProfileEdit = useCallback((updates: Partial<typeof getProfileEdit>) => {
+        setProfileEdit(prev => ({ ...prev, ...updates }));
+    }, []);
+
+
+
 
     // ── Drag state ─────────────────────────────────────────────────────────
     const [containerWidth, setContainerWidth] = useState(0);
@@ -437,17 +509,17 @@ export function Screen_editprofile({ navigation }: { navigation: any }) {
             ),
             headerRight: () => (
                 <View style={{ paddingRight: 12, flexDirection: 'row', gap: 18, alignItems: 'center' }}>
-                    <Pressable
+                    {getProfileEdit.id && <Pressable
                         onPress={() =>
                             navigation.push(namer.navigation.peoplesOnePerson, {
-                                getOnePersonId: getId,
+                                getOnePersonId: getProfileEdit.id,
                                 alreadyLiked: true,
                                 previewProfile: true,
                             })
                         }
                     >
                         <Text style={{ fontSize: 14, color: '#555' }}>Preview</Text>
-                    </Pressable>
+                    </Pressable>}
                     <Pressable
                         style={[pgStyles.saveBtn]}
                         onPress={handleSaveProfile}
@@ -461,18 +533,19 @@ export function Screen_editprofile({ navigation }: { navigation: any }) {
 
     // ── Helpers ────────────────────────────────────────────────────────────
     const getImageUri = useCallback((index: number): string => {
-        const target = getImages?.[index];
+        const target = getProfileEdit?.images?.[index];
         if (!target) return '';
         const path = target?.p ?? target?.uri ?? '';
         const isLocal = target?.local || path.startsWith('file:') || path.startsWith('content:');
-        return isLocal ? path : String(__MAPPER?.img_domain?.[0] + path);
-    }, [getImages, __MAPPER]);
+
+        return isLocal ? path : String(imageDomain + path);
+    }, [getProfileEdit?.images, __MAPPER]);
 
     // ── Save ───────────────────────────────────────────────────────────────
     const handleSaveProfile = async () => {
         Loaderx.show();
         try {
-            const orderedImageMeta = padImages(getImages)
+            const orderedImageMeta = padImages(getProfileEdit?.images)
                 .map((img, index) => {
                     const path = img?.p ?? img?.uri ?? '';
                     if (!path) return null;
@@ -489,21 +562,21 @@ export function Screen_editprofile({ navigation }: { navigation: any }) {
                 reqType: 'POST',
                 customApiUrl: hostServer() + '/api/core/v1/pushProfile',
                 bodyArray: {
-                    prof_about: getAboutText ?? '',
-                    prof_smoking: getSmoking ?? '',
-                    prof_drinking: getDrinking ?? '',
-                    prof_children: getChildren ?? '',
-                    prof_ethnicity: getEthnicity ?? '',
-                    prof_pet: getPets ?? '',
-                    prof_religion: getReligion ?? '',
-                    prof_bodytype: getBodyType ?? '',
-                    prof_highesteducation: getHighEducation ?? '',
-                    prof_relationshipgoal: getRelationshipGoal ?? '',
-                    prof_languages: getLanguages ?? '',
-                    prof_gender: getGender ?? '',
-                    prof_hometown: getHomeTown ?? '',
-                    prof_schoolattended: getSchoolAttended ?? '',
-                    prof_political: getPoliticalViews ?? '',
+                    prof_about: getProfileEdit?.about,
+                    prof_smoking: getProfileEdit?.smoking,
+                    prof_drinking: getProfileEdit?.drinking,
+                    prof_children: getProfileEdit?.children,
+                    prof_ethnicity: getProfileEdit?.ethnicity,
+                    prof_pet: getProfileEdit?.pets,
+                    prof_religion: getProfileEdit?.religion,
+                    prof_bodytype: getProfileEdit?.bodytype,
+                    prof_highesteducation: getProfileEdit?.highEducation,
+                    prof_relationshipgoal: getProfileEdit?.relationshipgoal,
+                    prof_languages: getProfileEdit?.languages,
+                    prof_gender: getProfileEdit?.gender,
+                    prof_hometown: getProfileEdit?.hometown,
+                    prof_schoolattended: getProfileEdit?.schoolattended,
+                    prof_political: getProfileEdit?.politicalview,
                     prof_prompts: JSON.stringify(getPrompts ?? []),
                     prof_interests: JSON.stringify(getInterests ?? []),
                     prof_images_meta: JSON.stringify(orderedImageMeta),
@@ -563,18 +636,20 @@ export function Screen_editprofile({ navigation }: { navigation: any }) {
             }
 
             const uploadedPath = encodeFilePath(presigned.fullPath);
-            setImages(prev => {
-                const updated = [...prev];
-                while (updated.length <= index) updated.push({});
-                updated[index] = {
-                    ...(updated[index] ?? {}),
-                    p: uploadedPath,
-                    uri: uploadedPath,
-                    local: false,
-                    w: asset.width,
-                    h: asset.height,
-                };
-                return updated.slice(0, MAX_PHOTOS);
+            updateProfileEdit({
+                images: (() => {
+                    const updated = [...getProfileEdit.images];
+                    while (updated.length <= index) updated.push({});
+                    updated[index] = {
+                        ...(updated[index] ?? {}),
+                        p: uploadedPath,
+                        uri: uploadedPath,
+                        local: false,
+                        w: asset.width,
+                        h: asset.height,
+                    };
+                    return updated.slice(0, MAX_PHOTOS);
+                })()
             });
         } catch (error: any) {
             Toastx.show({ type: 'error', message: error?.message ?? 'Unable to upload profile image.' });
@@ -584,12 +659,14 @@ export function Screen_editprofile({ navigation }: { navigation: any }) {
     }, []);
 
     const handleRemoveImage = useCallback((index: number) => {
-        setImages(prev => {
-            const updated = [...prev];
-            updated[index] = {};
-            return updated;
+        updateProfileEdit({
+            images: (() => {
+                const updated = [...getProfileEdit.images];
+                updated[index] = {};
+                return updated;
+            })()
         });
-    }, []);
+    }, [getProfileEdit.images, updateProfileEdit]);
 
     // ── Drag callbacks ─────────────────────────────────────────────────────
     const handleDragStart = useCallback((_index: number) => {
@@ -616,11 +693,9 @@ export function Screen_editprofile({ navigation }: { navigation: any }) {
         const toIndex = hitTestCell(cells, cx, cy);
         if (toIndex !== -1 && toIndex !== fromIndex) {
             LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-            setImages(prev => {
-                const arr = padImages(prev);
-                [arr[fromIndex], arr[toIndex]] = [arr[toIndex], arr[fromIndex]];
-                return arr;
-            });
+            const updated = [...getProfileEdit.images];
+            [updated[fromIndex], updated[toIndex]] = [updated[toIndex], updated[fromIndex]];
+            updateProfileEdit({ images: updated });
         }
     }, [containerWidth]);
 
@@ -683,7 +758,7 @@ export function Screen_editprofile({ navigation }: { navigation: any }) {
                                 </View>
 
                                 <PhotoGrid
-                                    images={getImages}
+                                    images={getProfileEdit.images}
                                     containerWidth={containerWidth}
                                     dropTargetIndex={dropTargetIndex}
                                     getImageUri={getImageUri}
@@ -726,7 +801,7 @@ export function Screen_editprofile({ navigation }: { navigation: any }) {
                                 </View>
                                 <TextInput
                                     style={[styles.editprofile_input, pgStyles.readOnlyInput]}
-                                    value={getFullname}
+                                    value={getProfileEdit.fullname}
                                     readOnly
                                 />
                             </View>
@@ -739,7 +814,7 @@ export function Screen_editprofile({ navigation }: { navigation: any }) {
                                 </View>
                                 <TextInput
                                     style={[styles.editprofile_input, pgStyles.readOnlyInput]}
-                                    value={help.getageFromDOB(getAge) ?? '—'}
+                                    value={help.getageFromDOB((getProfileEdit?.age)?.toString() ?? "") ?? '—'}
                                     readOnly
                                 />
                             </View>
@@ -754,14 +829,14 @@ export function Screen_editprofile({ navigation }: { navigation: any }) {
                                     style={[styles.editprofile_input, { height: 180 }]}
                                     multiline
                                     numberOfLines={8}
-                                    value={getAboutText}
-                                    onChangeText={setAboutText}
+                                    value={getProfileEdit.about}
+                                    onChangeText={(e) => updateProfileEdit({ about: e })}
                                     placeholder="Write something about yourself…"
                                     placeholderTextColor="#bbb"
                                     maxLength={400}
                                 />
                                 <Text style={pgStyles.charCounter}>
-                                    {getAboutText?.length ?? 0}/400 characters
+                                    {getProfileEdit.about?.length ?? 0}/400 characters
                                 </Text>
                             </View>
 
@@ -769,14 +844,14 @@ export function Screen_editprofile({ navigation }: { navigation: any }) {
                             <AccordionItem
                                 title="What are your Intentions?"
                                 titleStyle={[styles.editprofile_inputtitle, { paddingLeft: 0 }]}
-                                subtitle={__MAPPER?.bio_intent?.[getRelationshipGoal]}
+                                subtitle={__MAPPER?.bio_intent?.[getProfileEdit.relationshipgoal ?? ""]}
                                 Content={() => (
                                     <RadioGroup
                                         labelStyle={pgStyles.radioLabel}
                                         radioButtons={buildRadios(__MAPPER?.bio_intent)}
                                         containerStyle={{ alignItems: 'flex-start' }}
-                                        onPress={setRelationshipGoal}
-                                        selectedId={getRelationshipGoal}
+                                        onPress={(e) => updateProfileEdit({ relationshipgoal: e })}
+                                        selectedId={getProfileEdit.relationshipgoal ?? ""}
                                     />
                                 )}
                             />
@@ -785,14 +860,14 @@ export function Screen_editprofile({ navigation }: { navigation: any }) {
                             <AccordionItem
                                 title="What is your gender?"
                                 titleStyle={[styles.editprofile_inputtitle, { paddingLeft: 0 }]}
-                                subtitle={__MAPPER?.bio_gender?.[getGender]}
+                                subtitle={__MAPPER?.bio_gender?.[getProfileEdit.gender ?? ""]}
                                 Content={() => (
                                     <RadioGroup
                                         labelStyle={pgStyles.radioLabel}
                                         radioButtons={buildRadios(__MAPPER?.bio_gender)}
                                         containerStyle={{ alignItems: 'flex-start' }}
-                                        onPress={setGender}
-                                        selectedId={getGender}
+                                        onPress={() => updateProfileEdit({ gender: "" })}
+                                        selectedId={getProfileEdit.gender ?? ""}
                                     />
                                 )}
                             />
@@ -839,7 +914,7 @@ export function Screen_editprofile({ navigation }: { navigation: any }) {
                                     <IIcon name="location-outline" size={17} color="#888" />
                                 </View>
                                 <Text style={[styles.editprofile_input, pgStyles.readOnlyInput]}>
-                                    {getLocation || '—'}
+                                    {getProfileEdit.city || '—'}
                                 </Text>
                             </View>
 
@@ -851,12 +926,11 @@ export function Screen_editprofile({ navigation }: { navigation: any }) {
                                 </View>
                                 <TextInput
                                     style={styles.editprofile_input}
-                                    value={getHomeTown}
-                                    onChangeText={setHomeTown}
+                                    value={getProfileEdit.hometown}
+                                    onChangeText={(text) => updateProfileEdit({ hometown: text })}
                                     placeholder="Where are you from?"
                                     placeholderTextColor="#bbb"
                                     maxLength={45}
-                                    multiline
                                 />
                             </View>
 
@@ -864,19 +938,19 @@ export function Screen_editprofile({ navigation }: { navigation: any }) {
                             <AccordionItem
                                 title="Highest Education Achieved?"
                                 titleStyle={[styles.editprofile_inputtitle, { paddingLeft: 0 }]}
-                                subtitle={__MAPPER?.bio_education?.[getHighEducation]}
+                                subtitle={__MAPPER?.bio_education?.[getProfileEdit.highEducation ?? '']}
                                 Content={() => (
                                     <RadioGroup
                                         labelStyle={pgStyles.radioLabel}
                                         radioButtons={buildRadios(__MAPPER?.bio_education)}
                                         containerStyle={{ alignItems: 'flex-start' }}
-                                        onPress={setHighEducation}
-                                        selectedId={getHighEducation}
+                                        onPress={(id) => updateProfileEdit({ highEducation: id })}
+                                        selectedId={getProfileEdit.highEducation ?? undefined}
                                     />
                                 )}
                             />
 
-                            {/* ── Languages ────────────────────────────────── */}
+                            {/* Languages */}
                             <View style={styles.editprofile_inputborder}>
                                 <View style={pgStyles.inputHeader}>
                                     <Text style={styles.editprofile_inputtitle}>Languages</Text>
@@ -884,14 +958,16 @@ export function Screen_editprofile({ navigation }: { navigation: any }) {
                                 </View>
                                 <TextInput
                                     style={styles.editprofile_input}
-                                    value={getLanguages}
-                                    onChangeText={setLanguages}
-                                    placeholder="Languages you speak"
+                                    value={getProfileEdit.languages.join(', ')}
+                                    onChangeText={(text) => updateProfileEdit({
+                                        languages: text.split(',').map(l => l.trim()).filter(l => l)
+                                    })}
+                                    placeholder="Languages you speak (comma separated)"
                                     placeholderTextColor="#bbb"
                                 />
                             </View>
 
-                            {/* ── School Attended ──────────────────────────── */}
+                            {/* School Attended */}
                             <View style={styles.editprofile_inputborder}>
                                 <View style={pgStyles.inputHeader}>
                                     <Text style={styles.editprofile_inputtitle}>School Attended</Text>
@@ -899,12 +975,11 @@ export function Screen_editprofile({ navigation }: { navigation: any }) {
                                 </View>
                                 <TextInput
                                     style={styles.editprofile_input}
-                                    value={getSchoolAttended}
-                                    onChangeText={setSchoolAttended}
+                                    value={getProfileEdit.schoolattended}
+                                    onChangeText={(text) => updateProfileEdit({ schoolattended: text })}
                                     placeholder="What school did you attend?"
                                     placeholderTextColor="#bbb"
                                     maxLength={45}
-                                    multiline
                                 />
                             </View>
 
@@ -956,27 +1031,27 @@ export function Screen_editprofile({ navigation }: { navigation: any }) {
 
                             {/* ── Life Style Accordions ─────────────────────── */}
                             {[
-                                { title: 'Do you have children?', map: __MAPPER?.bio_children, state: getChildren, set: setChildren },
-                                { title: 'Do you smoke?', map: __MAPPER?.bio_smoking, state: getSmoking, set: setSmoking },
-                                { title: 'Do you drink?', map: __MAPPER?.bio_drinking, state: getDrinking, set: setDrinking },
-                                { title: 'Do you have a pet?', map: __MAPPER?.bio_pets, state: getPets, set: setPets },
-                                { title: 'What is your religion?', map: __MAPPER?.bio_religion, state: getReligion, set: setReligion },
-                                { title: 'What is your ethnicity?', map: __MAPPER?.bio_ethnicity, state: getEthnicity, set: setEthnicity },
-                                { title: 'Describe your body type', map: __MAPPER?.bio_bodytype, state: getBodyType, set: setBodyType },
-                                { title: 'Political Views?', map: __MAPPER?.bio_politicalview, state: getPoliticalViews, set: setPoliticalViews },
+                                { title: 'Do you have children?', map: __MAPPER?.bio_children, state: getProfileEdit.children, set: (id: string) => updateProfileEdit({ children: id }) },
+                                { title: 'Do you smoke?', map: __MAPPER?.bio_smoking, state: getProfileEdit.smoking, set: (id: string) => updateProfileEdit({ smoking: id }) },
+                                { title: 'Do you drink?', map: __MAPPER?.bio_drinking, state: getProfileEdit.drinking, set: (id: string) => updateProfileEdit({ drinking: id }) },
+                                { title: 'Do you have a pet?', map: __MAPPER?.bio_pets, state: getProfileEdit.pets, set: (id: string) => updateProfileEdit({ pets: id }) },
+                                { title: 'What is your religion?', map: __MAPPER?.bio_religion, state: getProfileEdit.religion, set: (id: string) => updateProfileEdit({ religion: id }) },
+                                { title: 'What is your ethnicity?', map: __MAPPER?.bio_ethnicity, state: getProfileEdit.ethnicity, set: (id: string) => updateProfileEdit({ ethnicity: id }) },
+                                { title: 'Describe your body type', map: __MAPPER?.bio_bodytype, state: getProfileEdit.bodytype, set: (id: string) => updateProfileEdit({ bodytype: id }) },
+                                { title: 'Political Views?', map: __MAPPER?.bio_politicalview, state: getProfileEdit.politicalview, set: (id: string) => updateProfileEdit({ politicalview: id }) },
                             ].map(({ title, map, state, set }) => (
                                 <AccordionItem
                                     key={title}
                                     title={title}
                                     titleStyle={[styles.editprofile_inputtitle, { paddingLeft: 0 }]}
-                                    subtitle={(map as Record<string, string>)?.[state]}
+                                    subtitle={(map as Record<string, string>)?.[state ?? '']}
                                     Content={() => (
                                         <RadioGroup
                                             labelStyle={pgStyles.radioLabel}
                                             radioButtons={buildRadios(map as Record<string, string>)}
                                             containerStyle={{ alignItems: 'flex-start' }}
                                             onPress={set}
-                                            selectedId={state}
+                                            selectedId={state ?? undefined}
                                         />
                                     )}
                                 />

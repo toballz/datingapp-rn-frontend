@@ -1,11 +1,11 @@
-import React, { useCallback, useLayoutEffect, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import IIcon from 'react-native-vector-icons/Ionicons';
 import { Loaderx } from '../funcs/functions_stateful';
 import RadioGroup from 'react-native-radio-buttons-group';
 import RangeSlider from 'rn-range-slider';
 import { namer, styles } from '../funcs/static';
-import { _http_request, help, hostServer, llStorage } from '../funcs/functions';
+import { _http_request, cacheStorage, help, hostServer, llStorage } from '../funcs/functions';
 import { AccordionItem } from '../funcs/customAccordion';
 import { Toastx } from '../funcs/customNotification';
 import { useHeaderHeight } from '@react-navigation/elements';
@@ -14,32 +14,96 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 type TabMode = 'basics' | 'more';
 
 export function Screen_editpreference({ navigation }: { navigation: any }) {
-    const __MAPPER = llStorage.CONFIG.get()?.mapper;
-    const currentProfile = llStorage.currentProfile.get()?.currentUser;
     const headerHeight = useHeaderHeight();
-    const hasPremium = currentProfile?.user_effect?.has_active_subscription ?? false;
+    const [getProfile, setProfile] = useState<any>(null);
+
+    const __MAPPER = llStorage.CONFIG.get()?.mapper;
+
+
+
+
+
+    const [preferences, setPreferences] = useState({
+        minAge: '19',
+        maxAge: '47',
+        gender: '-99',
+        children: '-99',
+        smoking: '-99',
+        drinking: '-99',
+        relationshipGoal: '-99',
+        highEducation: '-99',
+        ethnicity: '-99',
+        languages: '-99',
+        pets: '-99',
+        bodyType: '-99',
+        religion: '-99',
+        distance: { miles: 25, km: '40' }
+    });
+
+
+
+
+
+
+
+
+    const hasPremium = getProfile?.user_effect?.has_active_subscription ?? false;
 
     const [activeTab, setActiveTab] = useState<TabMode>('basics');
 
-    const [getMinAge, setMinAge] = useState(currentProfile?.user_preference_minimum_age?.toString() ?? '19');
-    const [getMaxAge, setMaxAge] = useState(currentProfile?.user_preference_maximum_age?.toString() ?? '47');
-    const [getGender, setGender] = useState(currentProfile?.user_preference_gender?.toString() ?? '-99');
-    const [getChildren, setChildren] = useState<string>(currentProfile?.user_preference_children?.toString() ?? '-99');
-    const [getSmoking, setSmoking] = useState(currentProfile?.user_preference_smoking?.toString() ?? '-99');
-    const [getDrinking, setDrinking] = useState(currentProfile?.user_preference_drinking?.toString() ?? '-99');
-    const [getRelationshipGoal, setRelationshipGoal] = useState(currentProfile?.user_preference_relationshipgoal?.toString() ?? '-99');
-
-    const [getHighEducation, setHighEducation] = useState(currentProfile?.user_preference_highesteducation?.toString() ?? '-99');
-    const [getEthnicity, setEthnicity] = useState(currentProfile?.user_preference_ethnicity?.toString() ?? '-99');
-    const [getLanguages, setLanguages] = useState(currentProfile?.user_preference_languages?.toString() ?? '-99');
-    const [getPets, setPets] = useState(currentProfile?.user_preference_pet?.toString() ?? '-99');
-    const [getBodyType, setBodyType] = useState(currentProfile?.user_preference_bodytype?.toString() ?? '-99');
-    const [getReligion, setReligion] = useState(currentProfile?.user_preference_religion?.toString() ?? '-99');
-
     const [getDistance, setDistance] = useState<{ miles: number; km: string }>({
-        miles: currentProfile?.user_preference_distance ?? 25,
-        km: help.milesToKM(currentProfile?.user_preference_distance)?.toString() ?? 'Unknown',
+        miles: getProfile?.user_preference_distance ?? 25,
+        km: help.milesToKM(getProfile?.user_preference_distance)?.toString() ?? 'Unknown',
     });
+
+
+    useEffect(() => {
+        let mounted = true;
+        (async () => {
+            try {
+                const [profile] = await Promise.all([cacheStorage.getCurrentUserProfile()]);
+
+                if (mounted) {
+                    setProfile(profile);
+                    setPreferences({
+                        minAge: profile?.user_preference_minimum_age?.toString() ?? '19',
+                        maxAge: profile?.user_preference_maximum_age?.toString() ?? '47',
+                        gender: profile?.user_preference_gender?.toString() ?? '-99',
+                        children: profile?.user_preference_children?.toString() ?? '-99',
+                        smoking: profile?.user_preference_smoking?.toString() ?? '-99',
+                        drinking: profile?.user_preference_drinking?.toString() ?? '-99',
+                        relationshipGoal: profile?.user_preference_relationshipgoal?.toString() ?? '-99',
+                        highEducation: profile?.user_preference_highesteducation?.toString() ?? '-99',
+                        ethnicity: profile?.user_preference_ethnicity?.toString() ?? '-99',
+                        languages: profile?.user_preference_languages?.toString() ?? '-99',
+                        pets: profile?.user_preference_pet?.toString() ?? '-99',
+                        bodyType: profile?.user_preference_bodytype?.toString() ?? '-99',
+                        religion: profile?.user_preference_religion?.toString() ?? '-99',
+                        distance: {
+                            miles: profile?.user_preference_distance ?? 25,
+                            km: help.milesToKM(profile?.user_preference_distance)?.toString() ?? '40',
+                        }
+                    });
+                }
+            } catch {
+                if (mounted) {
+                    setProfile(null);
+                }
+            }
+        })();
+
+        return () => { mounted = false; };
+    }, []);
+
+
+
+
+
+
+
+
+
+
 
     const radioButtons = {
         getGender: [...Object.entries(__MAPPER?.bio_gender ?? {}), ['-99', "Don't matter"]] as [string, string][],
@@ -61,26 +125,26 @@ export function Screen_editpreference({ navigation }: { navigation: any }) {
             customApiUrl: hostServer() + '/api/core/v1/pushProfile',
             reqType: 'POST',
             bodyArray: {
-                min_age: getMinAge,
-                max_age: getMaxAge,
-                pref_smoking: getSmoking,
-                pref_drinking: getDrinking,
-                pref_children: getChildren,
-                pref_ethnicity: getEthnicity,
-                pref_pet: getPets,
-                pref_religion: getReligion,
-                pref_bodytype: getBodyType,
-                pref_highesteducation: getHighEducation,
-                pref_relationshipgoal: getRelationshipGoal,
-                pref_languages: getLanguages,
-                pref_gender: getGender,
+                min_age: preferences.minAge,
+                max_age: preferences.maxAge,
+                pref_smoking: preferences.smoking,
+                pref_drinking: preferences.drinking,
+                pref_children: preferences.children,
+                pref_ethnicity: preferences.ethnicity,
+                pref_pet: preferences.pets,
+                pref_religion: preferences.religion,
+                pref_bodytype: preferences.bodyType,
+                pref_highesteducation: preferences.highEducation,
+                pref_relationshipgoal: preferences.relationshipGoal,
+                pref_languages: preferences.languages,
+                pref_gender: preferences.gender,
                 pref_distance: getDistance.miles,
             },
         })
             .then((response) => {
                 if (response?.code === 200) {
                     Toastx.show({ type: 'success', message: response?.message ?? 'Preferences updated!' });
-                    llStorage.currentProfile.load();
+                    cacheStorage.getCurrentUserProfile(true);
                     navigation.goBack();
                 } else {
                     Toastx.show({
@@ -92,23 +156,7 @@ export function Screen_editpreference({ navigation }: { navigation: any }) {
             .finally(() => {
                 Loaderx.hide();
             });
-    }, [
-        getBodyType,
-        getChildren,
-        getDistance.miles,
-        getDrinking,
-        getEthnicity,
-        getGender,
-        getHighEducation,
-        getLanguages,
-        getMaxAge,
-        getMinAge,
-        getPets,
-        getRelationshipGoal,
-        getReligion,
-        getSmoking,
-        navigation,
-    ]);
+    }, [getDistance.miles, preferences, navigation,]);
 
     useLayoutEffect(() => {
         navigation.setOptions({
@@ -150,7 +198,7 @@ export function Screen_editpreference({ navigation }: { navigation: any }) {
     return (
         <SafeAreaView style={[styles.container, localStyles.root, { paddingTop: headerHeight + 10 }]} edges={['bottom']}>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.conainerScrollView, localStyles.contentContainer]}>
-             
+
 
                 <View style={localStyles.tabWrap}>
                     <Pressable style={[localStyles.tabBtn, activeTab === 'basics' && localStyles.tabBtnActive]} onPress={() => setActiveTab('basics')}>
@@ -164,21 +212,21 @@ export function Screen_editpreference({ navigation }: { navigation: any }) {
 
                 {activeTab === 'basics' ? (
                     <View style={{ gap: 12 }}>
-                        <View style={[styles.editprofile_inputborder, localStyles.card]}> 
+                        <View style={[styles.editprofile_inputborder, localStyles.card]}>
                             <Text style={localStyles.inputTitle}>Age range</Text>
-                            <Text style={localStyles.inputSubTitle}>Between {getMinAge} - {getMaxAge}</Text>
+                            <Text style={localStyles.inputSubTitle}>Between {preferences.minAge} - {preferences.maxAge}</Text>
                             <RangeSlider
                                 style={{ width: '100%', height: 30 }}
-                                low={parseInt(getMinAge) ?? 18}
-                                high={parseInt(getMaxAge) ?? 25}
+                                low={parseInt(preferences.minAge) ?? 18}
+                                high={parseInt(preferences.maxAge) ?? 19}
                                 min={18}
                                 max={100}
                                 step={1}
                                 floatingLabel={true}
                                 minRange={2}
                                 onValueChanged={(low: number, high: number) => {
-                                    if (low.toString() !== getMinAge) setMinAge(low.toString());
-                                    if (high.toString() !== getMaxAge) setMaxAge(high.toString());
+                                    if (low.toString() !== preferences.minAge) setPreferences(prev => ({ ...prev, minAge: low.toString() }));
+                                    if (high.toString() !== preferences.maxAge) setPreferences(prev => ({ ...prev, maxAge: high.toString() }));
                                 }}
                                 renderThumb={() => <View style={styles.slider_thumb} />}
                                 renderRail={() => <View style={styles.slider_rail} />}
@@ -187,7 +235,7 @@ export function Screen_editpreference({ navigation }: { navigation: any }) {
                         </View>
 
                         <View style={[styles.editprofile_inputborder, localStyles.card]}>
-                            <Text style={localStyles.inputTitle}>{`Distance from you (${currentProfile?.user_location?.city || 'your area'})`}</Text>
+                            <Text style={localStyles.inputTitle}>{`Distance from you (${getProfile?.user_location?.city || 'your area'})`}</Text>
                             <Text style={localStyles.inputSubTitle}>
                                 {getDistance.miles > 100 ? 'No limit on distance.' : `${getDistance.miles} miles from you`}
                             </Text>
@@ -210,8 +258,8 @@ export function Screen_editpreference({ navigation }: { navigation: any }) {
                             />
                         </View>
 
-                        {renderRadioAccordion('What gender are you interested in?', getGender, radioButtons.getGender, setGender)}
-                        {renderRadioAccordion('What are your intentions?', getRelationshipGoal, radioButtons.getRelationshipGoal, setRelationshipGoal)}
+                        {renderRadioAccordion('What gender are you interested in?', preferences.gender, radioButtons.getGender, (id) => setPreferences(prev => ({ ...prev, gender: id })))}
+                        {renderRadioAccordion('What are your intentions?', preferences.relationshipGoal, radioButtons.getRelationshipGoal, (id) => setPreferences(prev => ({ ...prev, relationshipGoal: id })))}
                     </View>
                 ) : (
                     <View style={{ gap: 12 }}>
@@ -231,15 +279,15 @@ export function Screen_editpreference({ navigation }: { navigation: any }) {
                         ) : null}
 
                         <View pointerEvents={hasPremium ? 'auto' : 'none'} style={!hasPremium ? localStyles.moreDisabledBlock : undefined}>
-                            {renderRadioAccordion('Should they have kids?', getChildren, radioButtons.getChildren, setChildren)}
-                            {renderRadioAccordion('Should they drink?', getDrinking, radioButtons.getDrinking, setDrinking)}
-                            {renderRadioAccordion('Should they smoke?', getSmoking, radioButtons.getSmoking, setSmoking)}
-                            {renderRadioAccordion('Preferred ethnicity?', getEthnicity, radioButtons.getEthnicity, setEthnicity)}
-                            {renderRadioAccordion('Should they have pet(s)?', getPets, radioButtons.getPets, setPets)}
-                            {renderRadioAccordion('Preferred religion?', getReligion, radioButtons.getReligion, setReligion)}
-                            {renderRadioAccordion('Preferred highest education?', getHighEducation, radioButtons.getHighEducation, setHighEducation)}
-                            {renderRadioAccordion('Preferred body type?', getBodyType, radioButtons.getBodyType, setBodyType)}
-                            {renderRadioAccordion('Preferred language?', getLanguages, radioButtons.getLanguages, setLanguages)}
+                            {renderRadioAccordion('Should they have kids?', preferences.children, radioButtons.getChildren, (id) => setPreferences(prev => ({ ...prev, children: id })))}
+                            {renderRadioAccordion('Should they drink?', preferences.drinking, radioButtons.getDrinking, (id) => setPreferences(prev => ({ ...prev, drinking: id })))}
+                            {renderRadioAccordion('Should they smoke?', preferences.smoking, radioButtons.getSmoking, (id) => setPreferences(prev => ({ ...prev, smoking: id })))}
+                            {renderRadioAccordion('Preferred ethnicity?', preferences.ethnicity, radioButtons.getEthnicity, (id) => setPreferences(prev => ({ ...prev, ethnicity: id })))}
+                            {renderRadioAccordion('Should they have pet(s)?', preferences.pets, radioButtons.getPets, (id) => setPreferences(prev => ({ ...prev, pets: id })))}
+                            {renderRadioAccordion('Preferred religion?', preferences.religion, radioButtons.getReligion, (id) => setPreferences(prev => ({ ...prev, religion: id })))}
+                            {renderRadioAccordion('Preferred highest education?', preferences.highEducation, radioButtons.getHighEducation, (id) => setPreferences(prev => ({ ...prev, highEducation: id })))}
+                            {renderRadioAccordion('Preferred body type?', preferences.bodyType, radioButtons.getBodyType, (id) => setPreferences(prev => ({ ...prev, bodyType: id })))}
+                            {renderRadioAccordion('Preferred language?', preferences.languages, radioButtons.getLanguages, (id) => setPreferences(prev => ({ ...prev, languages: id })))}
                         </View>
                     </View>
                 )}

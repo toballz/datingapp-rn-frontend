@@ -3,7 +3,7 @@ import { View, Text, Pressable, StyleSheet, Animated, Easing, Platform, ImageBac
 import { Loaderx } from '../funcs/functions_stateful';
 import { useFocusEffect } from '@react-navigation/native';
 import { namer, resourceMap, styles } from '../funcs/static';
-import { _http_request, help, hostServer, llStorage, logReport } from '../funcs/functions';
+import { _http_request, cacheStorage, help, hostServer, llStorage, logReport } from '../funcs/functions';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useHeaderHeight } from '@react-navigation/elements';
 import MIcon from "react-native-vector-icons/MaterialCommunityIcons";
@@ -13,20 +13,49 @@ import LottieView from 'lottie-react-native';
 
 
 export function Screen_chat({ navigation }: { navigation: any }) {
-  const getProfile = llStorage.currentProfile.get()?.currentUser;
+  const [getProfile, setProfile] = useState<any>(null);
   const __MAPPER = llStorage.CONFIG.get()?.mapper;
+    
+  const imageDomain = __MAPPER?.img_domain[0];
 
   const [getNewMatches, setNewMatches] = useState<any>(null);
   const [getEngagedMessages, setEngagedMessages] = useState<any>([]);
   const [getCountLikes, setCountLikes] = useState<number>(0);
   const [getImageLikes, setImageLikes] = useState<{ p: string, w: string, h: string }>({ p: "", w: "", h: "" });
   const headerHeight = useHeaderHeight();
-  const activeSubscription = getProfile?.user_effect?.has_active_subscription ?? false;
+  const activeSubscription = getProfile?.stats?.has_active_subscription ?? false;
   const [activeFilter, setActiveFilter] = useState<'all' | 'yourTurn' | 'verified' | 'unread'>('all');
   const [visibleMessages, setVisibleMessages] = useState<number>(6);
   const CHATS_PAGE_SIZE = 5;
   const hasLikes = getCountLikes > 0;
   const hasNewMatches = Array.isArray(getNewMatches) && getNewMatches.length > 0;
+
+
+
+  useFocusEffect(
+    React.useCallback(() => {
+      let mounted = true;
+      (async () => {
+        try {
+          const [profile] = await Promise.all([
+            cacheStorage.getCurrentUserProfile()
+          ]);
+
+          if (mounted) {
+            setProfile(profile);
+          }
+        } catch {
+          if (mounted) {
+            setProfile(null);
+          }
+        }
+      })();
+
+      return () => { mounted = false; };
+    }, [])
+  );
+
+
 
 
   const bounceAnim = new Animated.Value(0);
@@ -114,7 +143,7 @@ export function Screen_chat({ navigation }: { navigation: any }) {
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flex: 1, marginRight: 12 }}>
             <Text style={{ color: '#cbd5e1', fontSize: 12 }}>Welcome back</Text>
-            <Text style={{ color: '#fff', fontSize: 18, fontWeight: '700', textTransform: "capitalize" }}>{getProfile?.user_fullname || 'You'}</Text>
+            <Text style={{ color: '#fff', fontSize: 18, fontWeight: '700', textTransform: "capitalize" }}>{getProfile?.profile?.fullname || 'You'}</Text>
             {countTotalConvo > 0 && <Text style={{ color: '#cbd5e1', fontSize: 13 }}>You have {countTotalConvo} open conversation.</Text>}
             {countNewMatches > 0 && <Text style={{ color: '#cbd5e1', marginTop: 4, fontSize: 13 }}>You have {countNewMatches} new connection. Message them before the sparks fade.</Text>}
           </View>
@@ -126,7 +155,7 @@ export function Screen_chat({ navigation }: { navigation: any }) {
             <Text style={{ color: '#fff', fontWeight: '700' }}>Boost visibility</Text>
           </Pressable>
           {!activeSubscription && (
-            <Pressable onPress={() => navigation.navigate(namer.navigation.coin, { tab: 'vip' })} style={{ flex: 1, backgroundColor: '#0ea5e9', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <Pressable onPress={() => { }} style={{ flex: 1, backgroundColor: '#0ea5e9', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <IIcon name="diamond" size={18} color="#fff" />
               <Text style={{ color: '#fff', fontWeight: '700' }}>Unlock premium</Text>
             </Pressable>
@@ -170,7 +199,7 @@ export function Screen_chat({ navigation }: { navigation: any }) {
               <Pressable onPress={() => navigation.navigate(namer.navigation.likes)} style={{ width: 110, height: 180, borderRadius: 10, overflow: 'hidden', backgroundColor: '#0ea5e9', justifyContent: 'center', alignItems: 'center' }}>
                 <ImageBackground progressiveRenderingEnabled={true} blurRadius={Platform.OS === "android" ? 60 : 30}
                   style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }}
-                  source={{ cache: 'default', uri: __MAPPER?.img_domain[0] + String(getImageLikes?.p) }} >
+                  source={{ cache: 'default', uri: imageDomain + String(getImageLikes?.p) }} >
                   <View style={{ backgroundColor: 'rgba(15,23,42,0.7)', borderRadius: 18, paddingHorizontal: 12, paddingVertical: 8, alignItems: 'center' }}>
                     <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>+{getCountLikes}</Text>
                   </View>
@@ -188,8 +217,8 @@ export function Screen_chat({ navigation }: { navigation: any }) {
                 renderItem={({ item }) => (
                   <Pressable style={{ width: 120 }} onPress={() => { navigation.navigate(namer.navigation.conversation, { matchId: item?.match_id }); }}>
                     <View style={{ borderRadius: 10, overflow: 'hidden', backgroundColor: '#e2e8f0', height: 180, justifyContent: 'flex-end' }}>
-                      <FastImage style={{ position: 'absolute', width: '100%', height: '100%' }} source={{ cache: FastImage.cacheControl.immutable, uri: String(__MAPPER?.img_domain[0] + item?.user_image?.p) }}
-                        onError={() => { return logReport({ type: "http -image", logMessage: "Image load", url: __MAPPER?.img_domain[0] + (getProfile?.user_image?.[0]?.p ?? ""), useraction: 'Image Load', stackTrace: null }); }} />
+                      <FastImage style={{ position: 'absolute', width: '100%', height: '100%' }} source={{ cache: FastImage.cacheControl.immutable, uri: String(imageDomain + item?.user_image?.p) }}
+                        onError={() => { return logReport({ type: "http -image", logMessage: "Image load", url: imageDomain + (getProfile?.profile?.images?.[0]?.p ?? ""), useraction: 'Image Load', stackTrace: null }); }} />
                       <View style={{ backgroundColor: 'rgba(0,0,0,0.4)', padding: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                         <Text style={{ fontSize: 13, fontWeight: '700', color: '#ffffffff', textTransform: 'capitalize', flex: 1 }} numberOfLines={2}>
                           {item?.user_fullname}{item?.user_dob ? `, ${help.getageFromDOB(item.user_dob)}` : ''}
@@ -251,7 +280,7 @@ export function Screen_chat({ navigation }: { navigation: any }) {
           return (
             <Pressable key={`message-${item?.match_id}-${index}`} onPress={() => { navigation.navigate(namer.navigation.conversation, { matchId: item?.match_id }); }}>
               <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 12, flexDirection: 'row', gap: 12, alignItems: 'center', borderWidth: 1, borderColor: '#e2e8f0', shadowColor: '#0f172a', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 2 }}>
-                <FastImage style={{ height: 58, width: 58, borderRadius: 16, backgroundColor: '#e2e8f0' }} source={{ uri: String(__MAPPER?.img_domain[0] + item?.user_image?.p), cache: FastImage.cacheControl.immutable, }} />
+                <FastImage style={{ height: 58, width: 58, borderRadius: 16, backgroundColor: '#e2e8f0' }} source={{ uri: String(imageDomain + item?.user_image?.p), cache: FastImage.cacheControl.immutable, }} />
                 <View style={{ flex: 1, gap: 5 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
@@ -372,7 +401,7 @@ export function Screen_chat({ navigation }: { navigation: any }) {
           return (
             <Pressable key={`message-${item?.match_id}-${index}`} onPress={() => { navigation.navigate(namer.navigation.conversation, { matchId: item?.match_id }); }}>
               <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 12, flexDirection: 'row', gap: 12, alignItems: 'center', borderWidth: 1, borderColor: '#e2e8f0', shadowColor: '#0f172a', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 2 }}>
-                <FastImage style={{ height: 58, width: 58, borderRadius: 16, backgroundColor: '#e2e8f0' }} source={{ uri: String(__MAPPER?.img_domain[0] + item?.user_image?.p), cache: FastImage.cacheControl.immutable, }} />
+                <FastImage style={{ height: 58, width: 58, borderRadius: 16, backgroundColor: '#e2e8f0' }} source={{ uri: String(imageDomain + item?.user_image?.p), cache: FastImage.cacheControl.immutable, }} />
                 <View style={{ flex: 1, gap: 5 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>

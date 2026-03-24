@@ -227,13 +227,13 @@ export const styles = StyleSheet.create({
 
 export const namer = {
     storage: { 
-        mapper_payload: '749bi6b5tvryshctds',
-        bundle_numcode: 'nm5wt4qadszx21',
+        mapper_payload: 'cbvyshctds', 
         sessionId: 'yksgiuw5ieytjgvc', //x-omi-auth
         sessionIdVerify: 'u4iek8r6uyfh', // authorization
         applog: 'fdgsdgn3t4gh',
         deviceSpecs: 'a54yregfdsg5534g',
-        currentUserProfile: "b5rb5vt8euiynry"
+        currentUserProfile: "b5rb5vt8euiynry",
+        products:"j6yn65ik57y"
     },
     navigation: {
         devpage: "zz_devv",

@@ -4,7 +4,7 @@ import { Loaderx, FullScreenImageModal, bottomsheet_renderBackdrop } from '../fu
 import IonIcon from 'react-native-vector-icons/Ionicons';
 import { namer, styles } from '../funcs/static';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { _http_request, help,   llStorage, mediaHandler, screenWidth, hostServer, logReport, uploadHandler, navigationRef } from '../funcs/functions';
+import { _http_request, help,   llStorage, mediaHandler, screenWidth, hostServer, logReport, uploadHandler, navigationRef, cacheStorage } from '../funcs/functions';
 import { Asset } from 'react-native-image-picker';
 import { ScrollView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -44,6 +44,7 @@ interface convoInterface {
 
 export function Screen_conversation({ navigation, route }: { navigation: any, route: any }) {
     const __MAPPER = llStorage.CONFIG.get()?.mapper;
+    const [getProfile, setProfile] = useState(cacheStorage.getCurrentUserProfile());
 
     const [getConversations, setConversations] = useState<convoInterface[]>([]);
     const [getUser2Deets, setUser2Deets] = useState<any>([]);
@@ -959,7 +960,7 @@ export function Screen_conversation({ navigation, route }: { navigation: any, ro
             });
 
             if (response?.code === 200) {
-                const jy = llStorage.currentProfile.get()?.currentUser?.user_fullname ?? "";
+                const jy = getProfile?.profile?.fullname ?? "";
                 setConvoSendingstatus("sent");
                 if (getUser2Deets?.uid) {
                     SocketClient.emit("/pushUser/" + getUser2Deets?.uid, {

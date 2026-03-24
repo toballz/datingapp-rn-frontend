@@ -151,14 +151,18 @@ export const help = {
 
 export const __init__app = async (): Promise<void> => {
 
-  await llStorage.CONFIG.generateFromServer();
-  //console.log(llStorage.CONFIG.get()?.mapper); 
+  await llStorage.CONFIG.getMapper();
+  
+  const getSession_omi = sessionManager.getCurrentSession()?.x_omi_payload;
+  const getSession_hash = sessionManager.getCurrentSession()?.x_omi_payload_hash;
 
 
   // connect with socket for realtime info
-  if (navigationRef === null) return;
-  (() => {
-    const userId = cacheStorage.getCurrentUserProfile()?.user_id;
+  if (!getSession_omi || !getSession_hash || navigationRef === null) return;
+  (async () => {
+    const getProfile = await cacheStorage.getCurrentUserProfile();
+    console.log("For socket", getProfile)
+    const userId = getProfile?.user_id;
     if (!userId) return;
     SocketClient.connect(userId, (data) => {
       const retrivedData = data?.message;
@@ -376,14 +380,13 @@ export async function getCurrentLocation() {
 
 // Local storage management
 export class llStorage {
-  private static tempMapper: any = null;
-  private static tempProducts: any = null;
+  private static tempMapper: any = null; 
 
 
 
   public static CONFIG = {
     get: () => { return { mapper: this.tempMapper } },
-    generateFromServer: async (): Promise<void> => {
+    getMapper: async (): Promise<void> => {
       const sessIdStorage = await AsyncStorage.getItem(namer.storage.sessionId);
       if (!sessIdStorage) return;
 
@@ -399,8 +402,7 @@ export class llStorage {
 
       if (server?.code === 200) {
         await AsyncStorage.setItem(namer.storage.mapper_payload, JSON.stringify(server?.mapper_payload));
-        this.tempMapper = server?.mapper_payload;
-        this.tempProducts = server?.products;
+        this.tempMapper = server?.mapper_payload; 
       } else {
         xxa_logggingReport({ type: "function", extra: server, useraction: "CONFIG.generateFromServer", url: `${hostServer()}/api/core/v1/getVersioning`, logMessage: "Failed to fetch versioning data", stackTrace: "" });
       }
@@ -409,25 +411,13 @@ export class llStorage {
 
   }
 
-  public get subscriptionDetails(): { isSubscribed: boolean; type: string } {
-    return {
-      isSubscribed: false,
-      type: ""
-    };
-  }
-  public set subscriptionDetails(profileData: any) {
 
-  }
-
-  public static purchasing_product = {
-    get: () => this.tempProducts
-  }
+ 
 
 
 }
 
-export const parseCategoryProducts = (categoryToGet: string) => {
-  const productLists = llStorage.purchasing_product?.get();
+export const parseCategoryProducts = (productLists: any = false, categoryToGet: string) => {
   if (!productLists) return [];
 
   if (Array.isArray(productLists)) {

@@ -1,4 +1,4 @@
-import React, { useState, useLayoutEffect, useMemo } from 'react';
+import React, { useState, useLayoutEffect, useMemo, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, TouchableOpacity } from 'react-native';
 import IIcon from 'react-native-vector-icons/Ionicons';
 import MIcon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -14,23 +14,27 @@ import LottieView from 'lottie-react-native';
 
 
 export function Screen_profile({ navigation }: { navigation: any }) {
-    const __MAPPER = llStorage.CONFIG.get()?.mapper;
-    const __product_MAPPER_mainsub = parseCategoryProducts(namer.productCategoryName.mainsub);
-    const __product_MAPPER_consumables = llStorage.purchasing_product?.get()?.consumables;
-
-    // Get profile data
-    const [getProfile, setProfile] = useState(cacheStorage.getCurrentUserProfile());
-    let activeSubscription = getProfile?.stats ?? {};
-    //activeSubscription = {"streakCount":1,"sub_id":"52ifcxelxzp8uhb2sgbngafb7s1pisr1smox5","sub_var":2,"sub_edate":"2026-03-20T18:15:37.000Z","sub_status":1};
-    console.log(activeSubscription)
-
-
-
     const headerHeight = useHeaderHeight();
+
+    const [getProfile, setProfile] = useState<any>(null);
+    const [__getProducts_mainsub, __setProducts_mainsub] = useState<any>(null);
 
     const userVerified = getProfile?.profile.verified
 
-    //console.log(getProfile?.user_verified);
+
+
+    const __MAPPER = llStorage.CONFIG.get()?.mapper;
+    const __product_MAPPER_consumables: any = null;//llStorage.purchasing_product?.get()?.consumables;
+
+    const imageDomain = __MAPPER?.img_domain[0];
+
+    let activeSubscription = getProfile?.stats ?? {};
+    //activeSubscription = {"streakCount":1,"sub_id":"52ifcxelxzp8uhb2sgbngafb7s1pisr1smox5","sub_var":2,"sub_edate":"2026-03-20T18:15:37.000Z","sub_status":1};
+    //console.log("stats", __MAPPER)
+
+
+
+
 
     const profileCompletion = useMemo(() => {
         const checkpoints = [
@@ -45,17 +49,40 @@ export function Screen_profile({ navigation }: { navigation: any }) {
             //!!getProfile?.user_interest?.length,
         ];
         const score = checkpoints.filter(Boolean).length;
-        //console.log(score, checkpoints);
+
         return Math.round((score / checkpoints.length) * 100);
     }, [getProfile]);
 
 
 
-    useFocusEffect(React.useCallback(() => {
-        const va=cacheStorage.getCurrentUserProfile()
-        setProfile(va);
-        console.log(va)
-    }, []));
+    useFocusEffect(
+        React.useCallback(() => {
+            let mounted = true;
+            (async () => {
+                try {
+                    const [products, profile] = await Promise.all([
+                        (async () => {
+                            const raw = await cacheStorage.getProducts();
+                            return parseCategoryProducts(raw, namer.productCategoryName.mainsub);
+                        })(),
+                        cacheStorage.getCurrentUserProfile()
+                    ]);
+
+                    if (mounted) {
+                        __setProducts_mainsub(products);
+                        setProfile(profile);
+                    }
+                } catch {
+                    if (mounted) {
+                        __setProducts_mainsub(null);
+                        setProfile(null);
+                    }
+                }
+            })();
+
+            return () => { mounted = false; };
+        }, [])
+    );
 
     useLayoutEffect(() => {
         navigation.setOptions({
@@ -107,8 +134,8 @@ export function Screen_profile({ navigation }: { navigation: any }) {
                                     <CircularProgress progress={profileCompletion} />
 
                                     <View style={{ borderRadius: 100, padding: 4, }}>
-                                        <FastImage style={{ width: 100, height: 100, borderRadius: 100, alignSelf: 'center', }} resizeMode='cover' source={{ uri: String(__MAPPER?.img_domain[0] + (getProfile?.user_image?.[0]?.p ?? "")) }}
-                                            onError={() => { return logReport({ type: "http -image", logMessage: "Image load", url: __MAPPER?.img_domain[0] + (getProfile?.profile?.images?.[0]?.p ?? ""), useraction: 'Image Load', stackTrace: null }); }} />
+                                        <FastImage style={{ width: 100, height: 100, borderRadius: 100, alignSelf: 'center', }} resizeMode='cover' source={{ uri: (imageDomain + getProfile?.profile?.images?.[0]?.p) }}
+                                            onError={() => { return logReport({ type: "http -image", logMessage: "Image load", url: imageDomain + (getProfile?.profile?.images?.[0]?.p), useraction: 'Image Load', stackTrace: null }); }} />
 
                                         {userVerified && <View style={{ position: 'absolute', bottom: 0, right: 0, backgroundColor: 'white', borderRadius: 50 }}>
                                             <IIcon name="checkmark-done-circle-sharp" size={32} color="#4F8EF7" />
@@ -167,7 +194,7 @@ export function Screen_profile({ navigation }: { navigation: any }) {
 
                     {<ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }} >
 
-                        {__product_MAPPER_mainsub?.map((tier: any, key: number) => {
+                        {__getProducts_mainsub?.map((tier: any, key: number) => {
                             const color = [['#000000', '#00000080'], ['#FF9E00', '#FF9E0080']]
                             const icon = ["diamond-outline", "crown-outline"]
                             const features = (tier?.description?.features ?? [])

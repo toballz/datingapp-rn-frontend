@@ -161,7 +161,7 @@ export const Auth_Login = () => {
         }
 
         if (htp.code === 200) {
-          await __init__app({ doAgain: true });
+          await __init__app();
           Toastx.show({ type: 'success', message: htp.message ?? 'Verification successful!' });
           return;
         }
