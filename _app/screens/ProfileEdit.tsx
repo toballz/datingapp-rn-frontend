@@ -209,6 +209,7 @@ const DraggablePhoto = React.memo(({
                         {!empty ? (
                             <>
                                 <Image
+                                    key={imageUri || `empty-${slotIndex}`}
                                     source={{ uri: imageUri }}
                                     style={photoStyles.img}
                                     resizeMode="cover"
@@ -364,7 +365,7 @@ const PhotoGrid = React.memo(({
         >
             {cells.map((cell, idx) => (
                 <DraggablePhoto
-                    key={idx}
+                    key={`${idx}-${padded[idx]?.p ?? padded[idx]?.uri ?? 'empty'}`}
                     image={padded[idx]}
                     slotIndex={idx}
                     cellWidth={cell.w}
@@ -484,8 +485,15 @@ export function Screen_editprofile({ navigation }: { navigation: any }) {
 
         return () => { mounted = false; };
     }, []);
-    const updateProfileEdit = useCallback((updates: Partial<typeof getProfileEdit>) => {
-        setProfileEdit(prev => ({ ...prev, ...updates }));
+    const updateProfileEdit = useCallback((
+        updates:
+            Partial<typeof getProfileEdit>
+            | ((prev: typeof getProfileEdit) => Partial<typeof getProfileEdit>)
+    ) => {
+        setProfileEdit(prev => ({
+            ...prev,
+            ...(typeof updates === 'function' ? updates(prev) : updates),
+        }));
     }, []);
 
 
@@ -638,37 +646,35 @@ export function Screen_editprofile({ navigation }: { navigation: any }) {
             }
 
             const uploadedPath = encodeFilePath(presigned.fullPath);
-            updateProfileEdit({
-                images: (() => {
-                    const updated = [...getProfileEdit.images];
-                    while (updated.length <= index) updated.push({});
-                    updated[index] = {
-                        ...(updated[index] ?? {}),
-                        p: uploadedPath,
-                        uri: uploadedPath,
-                        local: false,
-                        w: asset.width,
-                        h: asset.height,
-                    };
-                    return updated.slice(0, MAX_PHOTOS);
-                })()
+            updateProfileEdit(prev => {
+                const updated = [...prev.images];
+                while (updated.length <= index) updated.push({});
+                updated[index] = {
+                    ...(updated[index] ?? {}),
+                    p: uploadedPath,
+                    uri: uploadedPath,
+                    local: false,
+                    w: asset.width,
+                    h: asset.height,
+                };
+                return {
+                    images: updated.slice(0, MAX_PHOTOS),
+                };
             });
         } catch (error: any) {
             Toastx.show({ type: 'error', message: error?.message ?? 'Unable to upload profile image.' });
         } finally {
             Loaderx.hide();
         }
-    }, []);
+    }, [updateProfileEdit]);
 
     const handleRemoveImage = useCallback((index: number) => {
-        updateProfileEdit({
-            images: (() => {
-                const updated = [...getProfileEdit.images];
-                updated[index] = {};
-                return updated;
-            })()
+        updateProfileEdit(prev => {
+            const updated = [...prev.images];
+            updated[index] = {};
+            return { images: updated };
         });
-    }, [getProfileEdit.images, updateProfileEdit]);
+    }, [updateProfileEdit]);
 
     // ── Drag callbacks ─────────────────────────────────────────────────────
     const handleDragStart = useCallback((_index: number) => {
@@ -695,11 +701,13 @@ export function Screen_editprofile({ navigation }: { navigation: any }) {
         const toIndex = hitTestCell(cells, cx, cy);
         if (toIndex !== -1 && toIndex !== fromIndex) {
             LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-            const updated = [...getProfileEdit.images];
-            [updated[fromIndex], updated[toIndex]] = [updated[toIndex], updated[fromIndex]];
-            updateProfileEdit({ images: updated });
+            updateProfileEdit(prev => {
+                const updated = [...prev.images];
+                [updated[fromIndex], updated[toIndex]] = [updated[toIndex], updated[fromIndex]];
+                return { images: updated };
+            });
         }
-    }, [containerWidth]);
+    }, [containerWidth, updateProfileEdit]);
 
     const handleGridLayout = useCallback((w: number) => {
         setContainerWidth(w);
