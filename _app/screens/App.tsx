@@ -134,6 +134,7 @@ const MainApp: React.FC = () => {
         }} />
       <TabBottom.Screen name={namer.navigation.peoples} component={Peoples_Screen}
         options={{
+          headerShown: false,
           tabBarIcon: () => <MIcon name="cards-outline" size={30} color="#4F8EF7" />,
         }} />
 

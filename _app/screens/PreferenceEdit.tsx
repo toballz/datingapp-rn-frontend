@@ -13,6 +13,23 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 type TabMode = 'basics' | 'more';
 
+const defaultPreferences = {
+    minAge: '19',
+    maxAge: '47',
+    gender: '-99',
+    children: '-99',
+    smoking: '-99',
+    drinking: '-99',
+    relationshipGoal: '-99',
+    highEducation: '-99',
+    ethnicity: '-99',
+    languages: '-99',
+    pets: '-99',
+    bodyType: '-99',
+    religion: '-99',
+    distance: { miles: 25, km: '40' }
+};
+
 export function Screen_editpreference({ navigation }: { navigation: any }) {
     const headerHeight = useHeaderHeight();
     const [getProfile, setProfile] = useState<any>(null);
@@ -23,22 +40,7 @@ export function Screen_editpreference({ navigation }: { navigation: any }) {
 
 
 
-    const [preferences, setPreferences] = useState({
-        minAge: '19',
-        maxAge: '47',
-        gender: '-99',
-        children: '-99',
-        smoking: '-99',
-        drinking: '-99',
-        relationshipGoal: '-99',
-        highEducation: '-99',
-        ethnicity: '-99',
-        languages: '-99',
-        pets: '-99',
-        bodyType: '-99',
-        religion: '-99',
-        distance: { miles: 25, km: '40' }
-    });
+    const [preferences, setPreferences] = useState(defaultPreferences);
 
 
 
@@ -47,13 +49,13 @@ export function Screen_editpreference({ navigation }: { navigation: any }) {
 
 
 
-    const hasPremium = getProfile?.user_effect?.has_active_subscription ?? false;
+    const hasPremium = getProfile?.subscription?.status === 'active';
 
     const [activeTab, setActiveTab] = useState<TabMode>('basics');
 
     const [getDistance, setDistance] = useState<{ miles: number; km: string }>({
-        miles: getProfile?.user_preference_distance ?? 25,
-        km: help.milesToKM(getProfile?.user_preference_distance)?.toString() ?? 'Unknown',
+        miles: defaultPreferences.distance.miles,
+        km: defaultPreferences.distance.km,
     });
 
 
@@ -65,25 +67,32 @@ export function Screen_editpreference({ navigation }: { navigation: any }) {
 
                 if (mounted) {
                     setProfile(profile);
-                    setPreferences({
-                        minAge: profile?.user_preference_minimum_age?.toString() ?? '19',
-                        maxAge: profile?.user_preference_maximum_age?.toString() ?? '47',
-                        gender: profile?.user_preference_gender?.toString() ?? '-99',
-                        children: profile?.user_preference_children?.toString() ?? '-99',
-                        smoking: profile?.user_preference_smoking?.toString() ?? '-99',
-                        drinking: profile?.user_preference_drinking?.toString() ?? '-99',
-                        relationshipGoal: profile?.user_preference_relationshipgoal?.toString() ?? '-99',
-                        highEducation: profile?.user_preference_highesteducation?.toString() ?? '-99',
-                        ethnicity: profile?.user_preference_ethnicity?.toString() ?? '-99',
-                        languages: profile?.user_preference_languages?.toString() ?? '-99',
-                        pets: profile?.user_preference_pet?.toString() ?? '-99',
-                        bodyType: profile?.user_preference_bodytype?.toString() ?? '-99',
-                        religion: profile?.user_preference_religion?.toString() ?? '-99',
+                    const profilePreferences = profile?.preferences ?? {};
+                    const distanceMiles = Number(profilePreferences?.distance ?? defaultPreferences.distance.miles);
+                    const nextPreferences = {
+                        minAge: profilePreferences?.minimum_age?.toString() ?? defaultPreferences.minAge,
+                        maxAge: profilePreferences?.maximum_age?.toString() ?? defaultPreferences.maxAge,
+                        gender: profilePreferences?.gender?.toString() ?? defaultPreferences.gender,
+                        children: profilePreferences?.children?.toString() ?? defaultPreferences.children,
+                        smoking: profilePreferences?.smoking?.toString() ?? defaultPreferences.smoking,
+                        drinking: profilePreferences?.drinking?.toString() ?? defaultPreferences.drinking,
+                        relationshipGoal: profilePreferences?.relationshipgoal?.toString() ?? defaultPreferences.relationshipGoal,
+                        highEducation: profilePreferences?.education?.toString() ?? defaultPreferences.highEducation,
+                        ethnicity: profilePreferences?.ethnicity?.toString() ?? defaultPreferences.ethnicity,
+                        languages: Array.isArray(profilePreferences?.language)
+                            ? (profilePreferences.language[0]?.toString() ?? defaultPreferences.languages)
+                            : (profilePreferences?.language?.toString() ?? defaultPreferences.languages),
+                        pets: profilePreferences?.pet?.toString() ?? defaultPreferences.pets,
+                        bodyType: profilePreferences?.bodytype?.toString() ?? defaultPreferences.bodyType,
+                        religion: profilePreferences?.religion?.toString() ?? defaultPreferences.religion,
                         distance: {
-                            miles: profile?.user_preference_distance ?? 25,
-                            km: help.milesToKM(profile?.user_preference_distance)?.toString() ?? '40',
+                            miles: distanceMiles,
+                            km: help.milesToKM(distanceMiles)?.toString() ?? defaultPreferences.distance.km,
                         }
-                    });
+                    };
+
+                    setPreferences(nextPreferences);
+                    setDistance(nextPreferences.distance);
                 }
             } catch {
                 if (mounted) {
@@ -121,41 +130,41 @@ export function Screen_editpreference({ navigation }: { navigation: any }) {
 
     const savePreferences = useCallback(async () => {
         Loaderx.show();
-        _http_request({
-            customApiUrl: hostServer() + '/api/core/v1/pushProfile',
-            reqType: 'POST',
-            bodyArray: {
-                min_age: preferences.minAge,
-                max_age: preferences.maxAge,
-                pref_smoking: preferences.smoking,
-                pref_drinking: preferences.drinking,
-                pref_children: preferences.children,
-                pref_ethnicity: preferences.ethnicity,
-                pref_pet: preferences.pets,
-                pref_religion: preferences.religion,
-                pref_bodytype: preferences.bodyType,
-                pref_highesteducation: preferences.highEducation,
-                pref_relationshipgoal: preferences.relationshipGoal,
-                pref_languages: preferences.languages,
-                pref_gender: preferences.gender,
-                pref_distance: getDistance.miles,
-            },
-        })
-            .then((response) => {
-                if (response?.code === 200) {
-                    Toastx.show({ type: 'success', message: response?.message ?? 'Preferences updated!' });
-                    cacheStorage.getCurrentUserProfile(true);
-                    navigation.goBack();
-                } else {
-                    Toastx.show({
-                        type: response?.code === 203 ? 'info' : 'error',
-                        message: response?.message ?? 'Error updating preference!',
-                    });
-                }
-            })
-            .finally(() => {
-                Loaderx.hide();
+        try {
+            const response = await _http_request({
+                customApiUrl: hostServer() + '/api/core/v1/pushProfile',
+                reqType: 'POST',
+                bodyArray: {
+                    min_age: preferences.minAge,
+                    max_age: preferences.maxAge,
+                    pref_smoking: preferences.smoking,
+                    pref_drinking: preferences.drinking,
+                    pref_children: preferences.children,
+                    pref_ethnicity: preferences.ethnicity,
+                    pref_pet: preferences.pets,
+                    pref_religion: preferences.religion,
+                    pref_bodytype: preferences.bodyType,
+                    pref_highesteducation: preferences.highEducation,
+                    pref_relationshipgoal: preferences.relationshipGoal,
+                    pref_languages: preferences.languages,
+                    pref_gender: preferences.gender,
+                    pref_distance: getDistance.miles,
+                },
             });
+
+            if (response?.code === 200) {
+                Toastx.show({ type: 'success', message: response?.message ?? 'Preferences updated!' });
+                await cacheStorage.getCurrentUserProfile(true);
+                navigation.goBack();
+            } else {
+                Toastx.show({
+                    type: response?.code === 203 ? 'info' : 'error',
+                    message: response?.message ?? 'Error updating preference!',
+                });
+            }
+        } finally {
+            Loaderx.hide();
+        }
     }, [getDistance.miles, preferences, navigation,]);
 
     useLayoutEffect(() => {
@@ -235,7 +244,7 @@ export function Screen_editpreference({ navigation }: { navigation: any }) {
                         </View>
 
                         <View style={[styles.editprofile_inputborder, localStyles.card]}>
-                            <Text style={localStyles.inputTitle}>{`Distance from you (${getProfile?.user_location?.city || 'your area'})`}</Text>
+                            <Text style={localStyles.inputTitle}>{`Distance from you (${getProfile?.profile?.location?.city || 'your area'})`}</Text>
                             <Text style={localStyles.inputSubTitle}>
                                 {getDistance.miles > 100 ? 'No limit on distance.' : `${getDistance.miles} miles from you`}
                             </Text>

@@ -5,7 +5,7 @@ import { View, Text, Pressable, ScrollView, Alert, TouchableOpacity, StyleSheet,
 import { Loaderx, FullScreenImageModal, bottomsheet_renderBackdrop } from '../funcs/functions_stateful';
 import { useFocusEffect } from '@react-navigation/native';
 import { styles, namer, colors, resourceMap } from '../funcs/static';
-import { _http_request, cacheStorage, getCurrentLocation, help, hostServer, llStorage, logReport, screenHeight } from '../funcs/functions';
+import { _http_request, cacheStorage, getCurrentLocation, help, hostServer, llStorage, logReport, screenHeight, sleep } from '../funcs/functions';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { TextInput } from 'react-native-gesture-handler';
@@ -18,6 +18,8 @@ import { CarouselRef, ControlledCarousel } from '../funcs/customCarousel';
 
 
 export default function Peoples_Screen({ route, navigation }: { route: any, navigation: any }) {
+    const [getProfile, setProfile] = useState<any>(null);
+
     const __MAPPER = llStorage.CONFIG.get()?.mapper;
 
     const [getLoading, setLoading] = useState<Boolean>(false);
@@ -25,7 +27,6 @@ export default function Peoples_Screen({ route, navigation }: { route: any, navi
     const [gptmd, sptmd] = useState<boolean>(false);
     const scrollViewRef = useRef<ScrollView>(null);
     const headerHeight = useHeaderHeight();
-    const [getProfile, setProfile] = useState(cacheStorage.getCurrentUserProfile());
     const [getSkippedPeoples, setSkippedPeoples] = useState<any[]>([]);
     const [photoIndex, setPhotoIndex] = useState(0);
     const [getFullscreenClickImage, setFullscreenClickImage] = useState<string | null>(null);
@@ -40,6 +41,28 @@ export default function Peoples_Screen({ route, navigation }: { route: any, navi
     const currentPhotos = currentUserImages.filter((img: any) => img?.p);
     const prompts = [currentPerson?.user_bio_prompt?.[0], currentPerson?.user_bio_prompt?.[1], currentPerson?.user_bio_prompt?.[2],].filter(Boolean);
     const imageDomain = __MAPPER?.img_domain?.[0] ?? null;
+
+    // profile
+    useEffect(() => {
+        let mounted = true;
+        (async () => {
+            try {
+                const [profile] = await Promise.all([cacheStorage.getCurrentUserProfile()]);
+                if (mounted && profile) {
+                    setProfile(profile);
+                }
+            } catch (error) {
+                console.error("Error loading profile:", error);
+                if (mounted) {
+                    setProfile(null);
+                }
+            }
+        })();
+
+        return () => { mounted = false; };
+    }, []);
+
+
 
     const bottomSheetRef_secondview = {
         ref: useRef<BottomSheet>(null),
@@ -70,8 +93,9 @@ export default function Peoples_Screen({ route, navigation }: { route: any, navi
     // header options
     useLayoutEffect(() => {
         navigation.setOptions({
-            headerTitleAlign: 'left',
+            headerShown: true,
             headerTransparent: true,
+            headerTitleAlign: 'left',
             headerTitle: () => <View style={{ paddingVertical: 6, }}>
                 <View style={{ alignItems: "center", flexDirection: "row", gap: 2 }}>
                     {getPeopleToMatch?.[0]?.user_verified === 1 && <IIcon name="checkmark-done-circle-sharp" size={20} color="#4F8EF7" />}
@@ -237,7 +261,7 @@ export default function Peoples_Screen({ route, navigation }: { route: any, navi
             <View style={{ flexDirection: "row", gap: 5 }}>
                 <IIcon name="location" size={30} color="#000" />
                 <View>
-                    <Text style={{ fontSize: 18, }}>{(getProfile?.user_location?.city && getProfile?.user_location?.city !== "unknown") ? getProfile?.user_location?.city + ", " : ""}{getProfile?.user_location?.state}</Text>
+                    <Text style={{ fontSize: 18, }}>{(getProfile?.profile?.location?.city && getProfile?.profile?.location?.city !== "unknown") ? getProfile?.profile?.location?.city + ", " : ""}{getProfile?.profile?.location?.state}</Text>
                     <Text style={{ fontSize: 14, color: '#909090', }}>Your primary Dating location.</Text>
                 </View>
             </View>
@@ -576,8 +600,11 @@ export default function Peoples_Screen({ route, navigation }: { route: any, navi
                                 lottieRef.current?.play();
                                 setLoading(true);
                                 peoples_action('like', 0, false).then(async () => {
-                                    setLoading(false);
-                                    lottieRef.current?.reset();
+                                    sleep(700).then(() => {
+                                        setLoading(false);
+                                        lottieRef.current?.reset();
+                                    })
+
                                 })
                             }}>
                                 <IIcon name="heart" size={30} color="#22c55e" />
@@ -612,8 +639,8 @@ export default function Peoples_Screen({ route, navigation }: { route: any, navi
 
                         <View style={matchStyles.photoRow}>
                             <View style={[matchStyles.photoCard, matchStyles.leftPhoto]}>
-                                <FastImage source={{ uri: String(imageDomain + (getProfile?.user_image?.[0]?.p ?? "")) }} style={{ width: '100%', height: '100%' }} resizeMode="cover"
-                                    onError={() => { return logReport({ type: "http -image", logMessage: "Image load", url: imageDomain + (getProfile?.user_image?.[0]?.p ?? ""), useraction: 'Image Load', stackTrace: null }); }} />
+                                <FastImage source={{ uri: String(imageDomain + (getProfile?.profile?.images?.[0]?.p ?? "")) }} style={{ width: '100%', height: '100%' }} resizeMode="cover"
+                                    onError={() => { return logReport({ type: "http -image", logMessage: "Image load", url: imageDomain + (getProfile?.profile?.images?.[0]?.p ?? ""), useraction: 'Image Load', stackTrace: null }); }} />
 
                             </View>
                             <View style={[matchStyles.photoCard, matchStyles.rightPhoto]}>
