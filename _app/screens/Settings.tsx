@@ -989,9 +989,8 @@ export function Screen_settings({ navigation }: { navigation: any }) {
 
 
   // FIXED: All onPress handlers now properly reference the refs
-  return (
-    <View style={modernStyles.container} >
-      <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
+  return (<>
+      <SafeAreaView style={modernStyles.container} edges={["bottom"]}>
         <Animated.ScrollView
           showsVerticalScrollIndicator={false}
           onScroll={Animated.event(
@@ -1349,7 +1348,7 @@ export function Screen_settings({ navigation }: { navigation: any }) {
           </View>
         </BottomSheetView>
       </BottomSheet>
-    </View >
+    </>
   );
 }
 

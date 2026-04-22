@@ -16,6 +16,7 @@ import { Toastx } from '../funcs/customNotification';
 import FastImage from 'react-native-fast-image';
 import { SocketClient } from '../funcs/socket_realtimeData';
 import ImageViewing from 'react-native-image-viewing';
+import { useHeaderHeight } from '@react-navigation/elements';
 
 const CONFIG = {
     imgSelectUploadLimit: 4,
@@ -47,6 +48,7 @@ interface convoInterface {
 
 export function Screen_conversation({ navigation, route }: { navigation: any, route: any }) {
 
+    const headerHeight = useHeaderHeight();
     const __MAPPER = llStorage.CONFIG.get()?.mapper;
     const imageDomain = __MAPPER?.img_domain[0];
     const [getProfile, setProfile] = useState<any>(null);
@@ -1096,7 +1098,7 @@ export function Screen_conversation({ navigation, route }: { navigation: any, ro
                                 <Text style={{ color: item.fromMe ? "#000" : "#fff" }}>
                                     {item.isUploading ? 'Uploading Video...' : `Video${fileSizeLabel ? ` | ${fileSizeLabel}` : ''}${durationFormatted ? ` | ${durationFormatted}` : ''}`}
                                 </Text>
-                             </TouchableOpacity>
+                            </TouchableOpacity>
                         </View>
                     )}
 
@@ -1129,7 +1131,7 @@ export function Screen_conversation({ navigation, route }: { navigation: any, ro
                                         {isCurrentAudio && audioPlayback.isPlaying && (
                                             <Text style={{ color: item.fromMe ? "#333" : "#dbe7ff", fontSize: 11 }}>playing</Text>
                                         )}
-                                     </View>
+                                    </View>
                                     <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 2, height: 20 }}>
                                         {audioWaveBars.map((bar) => (
                                             <View key={bar.key} style={{
@@ -1142,7 +1144,7 @@ export function Screen_conversation({ navigation, route }: { navigation: any, ro
                                                     ? (item.fromMe ? '#0f172a' : '#e0f2fe')
                                                     : (item.fromMe ? '#94a3b8' : '#93c5fd99')
                                             }} />
-                                        ))} 
+                                        ))}
                                     </View>
                                     <View style={{
                                         height: 3,
@@ -1187,7 +1189,7 @@ export function Screen_conversation({ navigation, route }: { navigation: any, ro
                                                 onError={() => { return logReport({ type: "http -image", logMessage: "Image load", url: imgPath, useraction: 'Image Load', stackTrace: null }); }} />
                                             {item.isUploading && (
                                                 <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
-                                                     <Text style={{ color: '#fff', marginTop: 5 }}>Uploading...</Text>
+                                                    <Text style={{ color: '#fff', marginTop: 5 }}>Uploading...</Text>
                                                 </View>
                                             )}
                                         </View>
@@ -1216,246 +1218,245 @@ export function Screen_conversation({ navigation, route }: { navigation: any, ro
     }));
 
     return (<>
-        <View style={[styles.container, {}]}>
+        <SafeAreaView style={[styles.container, { paddingTop: headerHeight}]} edges={['bottom']}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={0}
+                style={{ flex: 1 }} >
 
-            <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
-                <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                    keyboardVerticalOffset={Platform.OS === 'ios' ? 105 : 0}
-                    style={{ flex: 1 }} >
-
-                    <View style={{ paddingVertical: 5 }}>
-                        <Pressable onPress={() => { navigation.push(namer.navigation.peoplesOnePerson, { alreadyLiked: true, likedMatchedId: funt.matchId, getOnePersonId: getUser2Deets?.uid }); }}
-                            style={{ backgroundColor: '#f3f6ff', borderRadius: 14, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                            {getUser2Deets?.image?.p ? <FastImage source={{ uri: imageDomain + getUser2Deets?.image?.p, cache: FastImage.cacheControl.immutable }}
-                                style={{ width: 80, height: 80, borderRadius: 50 }} /> : <View style={{ width: 52, height: 52, borderRadius: 12, backgroundColor: '#d7def5' }} />}
-                            <View style={{ flex: 1, gap: 4 }}>
-                                <Text style={{ fontSize: 16, fontWeight: 'bold', textTransform: "capitalize" }}>{getUser2Deets?.fullname || "Your match"}</Text>
-                                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                                    {getUser2Deets?.city && <Text style={{ color: "#444" }}><IonIcon name="location-outline" size={14} color="#4F8EF7" /> {getUser2Deets?.city}</Text>}
-                                    {getUser2Deets?.verified && <View style={{ backgroundColor: "#e8f1ff", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, flexDirection: "row", alignItems: "center", gap: 4 }}>
-                                        <IonIcon name="shield-checkmark" size={14} color="#4F8EF7" />
-                                        <Text style={{ fontSize: 12, color: "#4F8EF7" }}>Verified</Text>
-                                    </View>}
-                                </View>
-                                <Text style={{ color: "#555", fontSize: 12 }}>Tap to view profile or read bio for conversation idea.</Text>
+                <View style={{ paddingVertical: 5 }}>
+                    <Pressable onPress={() => { navigation.push(namer.navigation.peoplesOnePerson, { alreadyLiked: true, likedMatchedId: funt.matchId, getOnePersonId: getUser2Deets?.uid }); }}
+                        style={{ backgroundColor: '#f3f6ff', borderRadius: 14, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                        {getUser2Deets?.image?.p ? <FastImage source={{ uri: imageDomain + getUser2Deets?.image?.p, cache: FastImage.cacheControl.immutable }}
+                            style={{ width: 80, height: 80, borderRadius: 50 }} /> : <View style={{ width: 52, height: 52, borderRadius: 12, backgroundColor: '#d7def5' }} />}
+                        <View style={{ flex: 1, gap: 4 }}>
+                            <Text style={{ fontSize: 16, fontWeight: 'bold', textTransform: "capitalize" }}>{getUser2Deets?.fullname || "Your match"}</Text>
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                                {getUser2Deets?.city && <Text style={{ color: "#444" }}><IonIcon name="location-outline" size={14} color="#4F8EF7" /> {getUser2Deets?.city}</Text>}
+                                {getUser2Deets?.verified && <View style={{ backgroundColor: "#e8f1ff", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, flexDirection: "row", alignItems: "center", gap: 4 }}>
+                                    <IonIcon name="shield-checkmark" size={14} color="#4F8EF7" />
+                                    <Text style={{ fontSize: 12, color: "#4F8EF7" }}>Verified</Text>
+                                </View>}
                             </View>
-                            <IonIcon name="chevron-forward" size={20} color="#4F8EF7" />
-                        </Pressable>
+                            <Text style={{ color: "#555", fontSize: 12 }}>Tap to view profile or read bio for conversation idea.</Text>
+                        </View>
+                        <IonIcon name="chevron-forward" size={20} color="#4F8EF7" />
+                    </Pressable>
 
 
-                    </View>
+                </View>
 
-                    <FlatList ref={flatListRef} data={getConversations}
-                        inverted
-                        keyExtractor={item => item.messageId}
-                        renderItem={renderMessage}
-                        initialNumToRender={4} maxToRenderPerBatch={4} windowSize={4}
-                        showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
-                        contentContainerStyle={{ gap: 10 }}
+                <FlatList ref={flatListRef} data={getConversations}
+                    style={{ flex: 1 }}
+                    inverted
+                    keyExtractor={item => item.messageId}
+                    renderItem={renderMessage}
+                    initialNumToRender={4} maxToRenderPerBatch={4} windowSize={4}
+                    showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
+                    contentContainerStyle={{ gap: 10 }}
 
-                        ListEmptyComponent={<View style={{ paddingVertical: 20, alignItems: "center", width: '100%' }}>
-                            <FlatList
-                                ref={starterCarouselRef}
-                                data={getConvoStarter}
-                                keyExtractor={(item, index) => `${item}-${index}`}
-                                renderItem={({ item }) => (
-                                    <Pressable
-                                        onPress={() => handleInsertPrompt(item)}
-                                        style={{
-                                            width: screenWidth * 0.78,
-                                            paddingVertical: 16,
-                                            paddingHorizontal: 18,
-                                            backgroundColor: '#0f172a',
-                                            borderRadius: 16,
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            shadowColor: '#000',
-                                            shadowOpacity: 0.1,
-                                            shadowRadius: 10,
-                                            shadowOffset: { width: 0, height: 4 },
-                                        }}>
-                                        <Text style={{ color: '#fff', fontSize: 15, textAlign: 'center', lineHeight: 22 }}>{item}</Text>
-                                        <Text style={{ color: '#cbd5e1', fontSize: 12, marginTop: 10 }}>Tap to use this prompt</Text>
-                                    </Pressable>
-                                )}
-                                horizontal
-                                showsHorizontalScrollIndicator={false}
-                                pagingEnabled
-                                snapToAlignment="center"
-                                decelerationRate="fast"
-                                onViewableItemsChanged={starterViewable}
-                                viewabilityConfig={starterViewConfig}
-                                contentContainerStyle={{ paddingHorizontal: ((screenWidth * 0.1) / 2), gap: 10 }}
-                            />
-                            {Array.isArray(getConvoStarter) && getConvoStarter.length > 1 && (
-                                <View style={{ flexDirection: 'row', gap: 6, marginTop: 10 }}>
-                                    {getConvoStarter.map((_: any, idx: number) => (
-                                        <View key={idx} style={{
-                                            width: 8,
-                                            height: 8,
-                                            borderRadius: 4,
-                                            backgroundColor: idx === starterIndex ? '#0ea5e9' : '#e2e8f0'
-                                        }} />
-                                    ))}
-                                </View>
+                    ListEmptyComponent={<View style={{ paddingVertical: 20, alignItems: "center", width: '100%' }}>
+                        <FlatList
+                            ref={starterCarouselRef}
+                            data={getConvoStarter}
+                            keyExtractor={(item, index) => `${item}-${index}`}
+                            renderItem={({ item }) => (
+                                <Pressable
+                                    onPress={() => handleInsertPrompt(item)}
+                                    style={{
+                                        width: screenWidth * 0.78,
+                                        paddingVertical: 16,
+                                        paddingHorizontal: 18,
+                                        backgroundColor: '#0f172a',
+                                        borderRadius: 16,
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        shadowColor: '#000',
+                                        shadowOpacity: 0.1,
+                                        shadowRadius: 10,
+                                        shadowOffset: { width: 0, height: 4 },
+                                    }}>
+                                    <Text style={{ color: '#fff', fontSize: 15, textAlign: 'center', lineHeight: 22 }}>{item}</Text>
+                                    <Text style={{ color: '#cbd5e1', fontSize: 12, marginTop: 10 }}>Tap to use this prompt</Text>
+                                </Pressable>
                             )}
-                        </View>}
-                        onLayout={() => {
-                            if (flatListRef.current && getConversations.length > 0) {
-                                flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
-                            }
-                        }}
-                    />
-
-                    {getInputImageVideo?.length > 0 && (
-                        <View>
-                            <ScrollView
-                                horizontal
-                                showsHorizontalScrollIndicator={false}
-                                style={{ marginVertical: 4 }}
-                                contentContainerStyle={{
-                                    gap: 4,
-                                    paddingHorizontal: 6, // ???????
-                                    alignItems: 'center'  // ????
-                                }}
-                            >
-                                {getInputImageVideo?.map((ag, index) => {
-                                    const originalWidth = ag?.width ?? 450;
-                                    const originalHeight = ag?.height ?? 600;
-                                    const targetHeight = 190; // uniform display height
-                                    const aspectRatio = originalWidth / originalHeight;
-                                    const targetWidth = Math.min(targetHeight * aspectRatio, screenWidth * .8);
-
-                                    return (
-                                        <Pressable key={index} onPress={() => { if (ag?.uri) setFullscreenClickImage(ag?.uri); }}>
-                                            <ImageBackground
-                                                style={{
-                                                    position: 'relative',
-                                                    borderRadius: 6,
-                                                    overflow: 'hidden', // ??????
-                                                    width: targetWidth,
-                                                    height: targetHeight,
-                                                }}
-                                                source={{ uri: ag?.uri }} >
-                                                <TouchableOpacity
-                                                    onPress={() => setInputImageVideo((prev) => prev?.filter((_, i) => i !== index))}
-                                                    style={{
-                                                        backgroundColor: 'rgba(0,0,0,0.65)',
-                                                        borderRadius: 12,
-                                                        width: 24,
-                                                        height: 24,
-                                                        justifyContent: 'center',
-                                                        alignItems: 'center',
-                                                        position: 'absolute',
-                                                        top: 6,
-                                                        right: 6,
-                                                        zIndex: 10,
-                                                        shadowColor: '#000',
-                                                        shadowOffset: { width: 0, height: 2 },
-                                                        shadowOpacity: 0.15,
-                                                        shadowRadius: 3,
-                                                        elevation: 3,
-                                                    }}
-                                                >
-                                                    <Icon name="close" color="#fff" size={16} />
-                                                </TouchableOpacity>
-                                            </ImageBackground>
-                                        </Pressable>
-                                    );
-                                })}
-                            </ScrollView>
-                        </View>)}
-
-                    {(isRecording || getInputAudio) &&
-                        <View style={{ marginHorizontal: 6, marginBottom: 8, padding: 12, borderRadius: 16, backgroundColor: isRecording ? '#fff1f1' : '#eef4ff', borderWidth: 1, borderColor: isRecording ? '#fbb4b4' : '#c9dcff', gap: 10 }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                                <View style={{ width: 42, height: 42, borderRadius: 30, backgroundColor: isRecording ? '#ffd6d6' : '#dfe8ff', alignItems: 'center', justifyContent: 'center' }}>
-                                    <MaterialCommunityIcons name={isRecording ? "record-circle" : "microphone-outline"} size={22} color={isRecording ? "#d00" : "#3b65ff"} />
-                                </View>
-                                <View style={{ flex: 1, gap: 2 }}>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <Text style={{ fontWeight: '700', color: '#111827' }}>{isRecording ? "Recording voice note" : "Voice note ready"}</Text>
-                                        {isRecording && <Text style={{ color: '#b91c1c', fontWeight: '700', fontSize: 11 }}>LIVE</Text>}
-                                    </View>
-                                    <Text style={{ color: '#334155', fontSize: 12 }}>{pendingTimeLabel} {isRecording ? "| max 3:00" : ""}</Text>
-                                </View>
-                            </View>
-
-                            <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 2, height: 22 }}>
-                                {pendingWaveBars.map((bar) => (
-                                    <View key={bar.key} style={{
-                                        width: 3,
-                                        borderRadius: 3,
-                                        height: bar.height,
-                                        backgroundColor: bar.active ? '#2563eb' : '#94a3b8'
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            pagingEnabled
+                            snapToAlignment="center"
+                            decelerationRate="fast"
+                            onViewableItemsChanged={starterViewable}
+                            viewabilityConfig={starterViewConfig}
+                            contentContainerStyle={{ paddingHorizontal: ((screenWidth * 0.1) / 2), gap: 10 }}
+                        />
+                        {Array.isArray(getConvoStarter) && getConvoStarter.length > 1 && (
+                            <View style={{ flexDirection: 'row', gap: 6, marginTop: 10 }}>
+                                {getConvoStarter.map((_: any, idx: number) => (
+                                    <View key={idx} style={{
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: 4,
+                                        backgroundColor: idx === starterIndex ? '#0ea5e9' : '#e2e8f0'
                                     }} />
                                 ))}
                             </View>
-                            <View style={{ height: 3, borderRadius: 3, backgroundColor: '#bfdbfe', overflow: 'hidden' }}>
-                                <View style={{ height: '100%', width: `${Math.max(4, Math.round(pendingProgressRatio * 100))}%`, backgroundColor: '#2563eb' }} />
+                        )}
+                    </View>}
+                    onLayout={() => {
+                        if (flatListRef.current && getConversations.length > 0) {
+                            flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+                        }
+                    }}
+                />
+
+                {getInputImageVideo?.length > 0 && (
+                    <View>
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            style={{ marginVertical: 4 }}
+                            contentContainerStyle={{
+                                gap: 4,
+                                paddingHorizontal: 6, // ???????
+                                alignItems: 'center'  // ????
+                            }}
+                        >
+                            {getInputImageVideo?.map((ag, index) => {
+                                const originalWidth = ag?.width ?? 450;
+                                const originalHeight = ag?.height ?? 600;
+                                const targetHeight = 190; // uniform display height
+                                const aspectRatio = originalWidth / originalHeight;
+                                const targetWidth = Math.min(targetHeight * aspectRatio, screenWidth * .8);
+
+                                return (
+                                    <Pressable key={index} onPress={() => { if (ag?.uri) setFullscreenClickImage(ag?.uri); }}>
+                                        <ImageBackground
+                                            style={{
+                                                position: 'relative',
+                                                borderRadius: 6,
+                                                overflow: 'hidden', // ??????
+                                                width: targetWidth,
+                                                height: targetHeight,
+                                            }}
+                                            source={{ uri: ag?.uri }} >
+                                            <TouchableOpacity
+                                                onPress={() => setInputImageVideo((prev) => prev?.filter((_, i) => i !== index))}
+                                                style={{
+                                                    backgroundColor: 'rgba(0,0,0,0.65)',
+                                                    borderRadius: 12,
+                                                    width: 24,
+                                                    height: 24,
+                                                    justifyContent: 'center',
+                                                    alignItems: 'center',
+                                                    position: 'absolute',
+                                                    top: 6,
+                                                    right: 6,
+                                                    zIndex: 10,
+                                                    shadowColor: '#000',
+                                                    shadowOffset: { width: 0, height: 2 },
+                                                    shadowOpacity: 0.15,
+                                                    shadowRadius: 3,
+                                                    elevation: 3,
+                                                }}
+                                            >
+                                                <Icon name="close" color="#fff" size={16} />
+                                            </TouchableOpacity>
+                                        </ImageBackground>
+                                    </Pressable>
+                                );
+                            })}
+                        </ScrollView>
+                    </View>)}
+
+                {(isRecording || getInputAudio) &&
+                    <View style={{ marginHorizontal: 6, marginBottom: 8, padding: 12, borderRadius: 16, backgroundColor: isRecording ? '#fff1f1' : '#eef4ff', borderWidth: 1, borderColor: isRecording ? '#fbb4b4' : '#c9dcff', gap: 10 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                            <View style={{ width: 42, height: 42, borderRadius: 30, backgroundColor: isRecording ? '#ffd6d6' : '#dfe8ff', alignItems: 'center', justifyContent: 'center' }}>
+                                <MaterialCommunityIcons name={isRecording ? "record-circle" : "microphone-outline"} size={22} color={isRecording ? "#d00" : "#3b65ff"} />
                             </View>
-
-                            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 8 }}>
-                                {getInputAudio &&
-                                    <TouchableOpacity onPress={() => handleAudioPress('pending-audio', getInputAudio)} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, backgroundColor: '#dbeafe' }}>
-                                        <MaterialCommunityIcons name={(audioPlayback.id === 'pending-audio' && audioPlayback.isPlaying) ? "pause-circle" : "play-circle"} size={22} color="#1d4ed8" />
-                                    </TouchableOpacity>
-                                }
-
-                                {!getInputAudio && <TouchableOpacity onPress={() => { stopVoiceNote(true) }} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, backgroundColor: '#fee2e2' }}>
-                                    <MaterialCommunityIcons name="stop-circle" size={24} color={"#dc2626"} />
-                                </TouchableOpacity>}
-
-                                {isRecording && <TouchableOpacity onPress={() => { clearVoiceNote(); }} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, backgroundColor: '#f1f5f9' }}>
-                                    <Icon name="close" size={18} color="#334155" />
-                                </TouchableOpacity>}
-
-                                {getInputAudio &&
-                                    <TouchableOpacity onPress={clearVoiceNote} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, backgroundColor: '#f1f5f9' }}>
-                                        <Icon name="trash-outline" size={18} color="#334155" />
-                                    </TouchableOpacity>
-                                }
+                            <View style={{ flex: 1, gap: 2 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <Text style={{ fontWeight: '700', color: '#111827' }}>{isRecording ? "Recording voice note" : "Voice note ready"}</Text>
+                                    {isRecording && <Text style={{ color: '#b91c1c', fontWeight: '700', fontSize: 11 }}>LIVE</Text>}
+                                </View>
+                                <Text style={{ color: '#334155', fontSize: 12 }}>{pendingTimeLabel} {isRecording ? "| max 3:00" : ""}</Text>
                             </View>
                         </View>
-                    }
 
-                    <View style={[styles.conversation_textInputContainer, { marginVertical: 5 }]}>
-                        <TouchableOpacity onPress={async () => {
-                            const hs = await mediaHandler.handleSelectFromGallery({
-                                mediaType: 'photo',
-                                includeBase64: false,
-                                selectionLimit: Math.max(1, CONFIG.imgSelectUploadLimit - getInputImageVideo.length)
-                            });
-                            if (hs) {
-                                if ((getInputImageVideo.length + hs.length) > CONFIG.imgSelectUploadLimit) {
-                                    Toastx.show({
-                                        message: "You are limited to " + CONFIG.imgSelectUploadLimit + " photos/video",
-                                        type: "info"
-                                    });
-                                } else {
-                                    setInputImageVideo(prev => {
-                                        const incoming = (hs || []).filter(
-                                            item => !prev.some(p => p.uri === item.uri)
-                                        );
-                                        return [...prev, ...incoming].slice(0, CONFIG.imgSelectUploadLimit);
-                                    });
-                                }
+                        <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 2, height: 22 }}>
+                            {pendingWaveBars.map((bar) => (
+                                <View key={bar.key} style={{
+                                    width: 3,
+                                    borderRadius: 3,
+                                    height: bar.height,
+                                    backgroundColor: bar.active ? '#2563eb' : '#94a3b8'
+                                }} />
+                            ))}
+                        </View>
+                        <View style={{ height: 3, borderRadius: 3, backgroundColor: '#bfdbfe', overflow: 'hidden' }}>
+                            <View style={{ height: '100%', width: `${Math.max(4, Math.round(pendingProgressRatio * 100))}%`, backgroundColor: '#2563eb' }} />
+                        </View>
+
+                        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 8 }}>
+                            {getInputAudio &&
+                                <TouchableOpacity onPress={() => handleAudioPress('pending-audio', getInputAudio)} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, backgroundColor: '#dbeafe' }}>
+                                    <MaterialCommunityIcons name={(audioPlayback.id === 'pending-audio' && audioPlayback.isPlaying) ? "pause-circle" : "play-circle"} size={22} color="#1d4ed8" />
+                                </TouchableOpacity>
                             }
-                        }} style={{ paddingHorizontal: 6 }}>
-                            <MaterialCommunityIcons name="camera" size={25} color="#4F8EF7" />
-                        </TouchableOpacity>
-                        <TouchableOpacity disabled={voiceNoteLoading} onPress={() => toggleVoiceNote()} style={{ paddingHorizontal: 6, opacity: voiceNoteLoading ? 0.5 : 1 }}>
-                            <MaterialCommunityIcons name={voiceNoteLoading ? "timer-sand" : (isRecording ? "stop-circle" : "microphone")} size={25} color={isRecording ? "#d00" : "#4F8EF7"} />
-                        </TouchableOpacity>
-                        <TextInput ref={inputTextRef} style={styles.conversation_textInput} value={inputText} onChangeText={setInputText} placeholder="Send a message" placeholderTextColor="#aaa" multiline />
-                        <TouchableOpacity disabled={(inputText.trim() || (getInputImageVideo.length > 0) || getInputAudio) ? false : true} onPress={() => sendMessage()} style={{ paddingHorizontal: 6, justifyContent: 'center' }}>
-                            <MaterialCommunityIcons name="send" size={25} color="#4F8EF7" style={{ opacity: (inputText.trim() || (getInputImageVideo.length > 0) || getInputAudio) ? 1 : 0.4 }} />
-                        </TouchableOpacity>
+
+                            {!getInputAudio && <TouchableOpacity onPress={() => { stopVoiceNote(true) }} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, backgroundColor: '#fee2e2' }}>
+                                <MaterialCommunityIcons name="stop-circle" size={24} color={"#dc2626"} />
+                            </TouchableOpacity>}
+
+                            {isRecording && <TouchableOpacity onPress={() => { clearVoiceNote(); }} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, backgroundColor: '#f1f5f9' }}>
+                                <Icon name="close" size={18} color="#334155" />
+                            </TouchableOpacity>}
+
+                            {getInputAudio &&
+                                <TouchableOpacity onPress={clearVoiceNote} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, backgroundColor: '#f1f5f9' }}>
+                                    <Icon name="trash-outline" size={18} color="#334155" />
+                                </TouchableOpacity>
+                            }
+                        </View>
                     </View>
-                </KeyboardAvoidingView>
-            </SafeAreaView>
-        </View>
+                }
+
+                <View style={[styles.conversation_textInputContainer, { marginVertical: 5 }]}>
+                    <TouchableOpacity onPress={async () => {
+                        const hs = await mediaHandler.handleSelectFromGallery({
+                            mediaType: 'photo',
+                            includeBase64: false,
+                            selectionLimit: Math.max(1, CONFIG.imgSelectUploadLimit - getInputImageVideo.length)
+                        });
+                        if (hs) {
+                            if ((getInputImageVideo.length + hs.length) > CONFIG.imgSelectUploadLimit) {
+                                Toastx.show({
+                                    message: "You are limited to " + CONFIG.imgSelectUploadLimit + " photos/video",
+                                    type: "info"
+                                });
+                            } else {
+                                setInputImageVideo(prev => {
+                                    const incoming = (hs || []).filter(
+                                        item => !prev.some(p => p.uri === item.uri)
+                                    );
+                                    return [...prev, ...incoming].slice(0, CONFIG.imgSelectUploadLimit);
+                                });
+                            }
+                        }
+                    }} style={{ paddingHorizontal: 6 }}>
+                        <MaterialCommunityIcons name="camera" size={25} color="#4F8EF7" />
+                    </TouchableOpacity>
+                    <TouchableOpacity disabled={voiceNoteLoading} onPress={() => toggleVoiceNote()} style={{ paddingHorizontal: 6, opacity: voiceNoteLoading ? 0.5 : 1 }}>
+                        <MaterialCommunityIcons name={voiceNoteLoading ? "timer-sand" : (isRecording ? "stop-circle" : "microphone")} size={25} color={isRecording ? "#d00" : "#4F8EF7"} />
+                    </TouchableOpacity>
+                    <TextInput ref={inputTextRef} style={styles.conversation_textInput} value={inputText} onChangeText={setInputText} placeholder="Send a message" placeholderTextColor="#aaa" multiline />
+                    <TouchableOpacity disabled={(inputText.trim() || (getInputImageVideo.length > 0) || getInputAudio) ? false : true} onPress={() => sendMessage()} style={{ paddingHorizontal: 6, justifyContent: 'center' }}>
+                        <MaterialCommunityIcons name="send" size={25} color="#4F8EF7" style={{ opacity: (inputText.trim() || (getInputImageVideo.length > 0) || getInputAudio) ? 1 : 0.4 }} />
+                    </TouchableOpacity>
+                </View>
+            </KeyboardAvoidingView>
+        </SafeAreaView>
+
 
         <BottomSheet ref={bottomSheet_convotools?.ref}
             index={-1} enablePanDownToClose
@@ -1466,16 +1467,16 @@ export function Screen_conversation({ navigation, route }: { navigation: any, ro
             </BottomSheetView>
         </BottomSheet>
 
-<ImageViewing
-      images={[{ uri: getFullscreenClickImage }]}
-      imageIndex={0}
-      visible={!!getFullscreenClickImage}
-      onRequestClose={()=>{setFullscreenClickImage(null)}}
-      swipeToCloseEnabled={true}
-      doubleTapToZoomEnabled={true}
-      presentationStyle="overFullScreen"
-      animationType="fade"
-    />
+        <ImageViewing
+            images={[{ uri: getFullscreenClickImage }]}
+            imageIndex={0}
+            visible={!!getFullscreenClickImage}
+            onRequestClose={() => { setFullscreenClickImage(null) }}
+            swipeToCloseEnabled={true}
+            doubleTapToZoomEnabled={true}
+            presentationStyle="overFullScreen"
+            animationType="fade"
+        />
 
     </>
     );

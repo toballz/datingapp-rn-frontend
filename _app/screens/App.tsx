@@ -150,7 +150,7 @@ const MainApp: React.FC = () => {
             ) : (
               <>
                 <Stack.Screen name="Home" component={BottomTabNavigator} options={{ headerShown: false }} />
-                <Stack.Screen name={namer.navigation.conversation} component={Screen_conversation} options={{ headerBackTitle: '' }} />
+                <Stack.Screen name={namer.navigation.conversation} component={Screen_conversation} options={{ headerBackTitle: '', headerTransparent: true }} />
                 <Stack.Screen name={namer.navigation.editprofile} component={Screen_editprofile} options={{ headerBackTitle: '', headerTransparent: true }} />
                 <Stack.Screen name={namer.navigation.editpreference} component={Screen_editpreference} />
                 <Stack.Screen name={namer.navigation.peoplesOnePerson} component={Peoples_Screen} options={{ headerBackTitle: '' }} />

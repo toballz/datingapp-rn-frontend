@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import RNFS from 'react-native-fs';
 import { Loaderx, bottomsheet_renderBackdrop } from '../funcs/functions_stateful';
-import { ScrollView } from 'react-native-gesture-handler';
+import { ScrollView } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
     useSharedValue,
@@ -736,336 +736,340 @@ export function Screen_editprofile({ navigation }: { navigation: any }) {
 
     // ─────────────────────────────────────────────────────────────────────
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }} edges={['bottom']}>
-            <View style={[styles.container, { paddingTop: headerHeight }]}>
-                <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                    keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
+        <SafeAreaView style={[styles.container, { paddingTop: headerHeight, backgroundColor: '#fff' }]} edges={['bottom']} >
+
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={0}
+                style={{ flex: 1 }}
+            >
+                <ScrollView
                     style={{ flex: 1 }}
+                    contentContainerStyle={{ flexGrow: 1, paddingBottom: 80 }}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+                    automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+                    showsVerticalScrollIndicator={false}
                 >
-                    <ScrollView
-                        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
-                        showsVerticalScrollIndicator={false}
-                    >
-                        <View style={{ gap: 12, marginBottom: 12 }}>
+                    <View style={{ gap: 12, marginBottom: 12 }}>
 
-                            {/* ── Photo Grid ───────────────────────────────── */}
-                            <View style={{ gap: 8, marginBottom: 4 }}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, }}>
-                                    <MIcons name="image-multiple-outline" size={15} color="#888" />
-                                    <Text style={pgStyles.sectionLabel}>
-                                        Profile Photos
+                        {/* ── Photo Grid ───────────────────────────────── */}
+                        <View style={{ gap: 8, marginBottom: 4 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, }}>
+                                <MIcons name="image-multiple-outline" size={15} color="#888" />
+                                <Text style={pgStyles.sectionLabel}>
+                                    Profile Photos
+                                </Text>
+                                <Text style={pgStyles.sectionHint}>· drag to reorder</Text>
+                            </View>
+
+                            <PhotoGrid
+                                images={getProfileEdit.images}
+                                containerWidth={containerWidth}
+                                dropTargetIndex={dropTargetIndex}
+                                getImageUri={getImageUri}
+                                onPress={handlePress}
+                                onRemove={handleRemoveImage}
+                                onDragStart={handleDragStart}
+                                onDragMove={handleDragMove}
+                                onDragEnd={handleDragEnd}
+                                onLayout={handleGridLayout}
+                            />
+                        </View>
+
+                        {/* ── Vibes Banner ──────────────────────────────── */}
+                        <LinearGradient
+                            colors={['#f95f62', '#f27a9c']}
+                            style={[styles.card, { padding: 0 }]}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                        >
+                            <View style={pgStyles.bannerRow}>
+                                <View style={{ gap: 6, flex: 1 }}>
+                                    <View style={pgStyles.bannerBadge}>
+                                        <MIcons name="heart-multiple-outline" color="#f95f62" size={14} />
+                                        <Text style={pgStyles.bannerBadgeText}>Vibes &amp; Energy</Text>
+                                    </View>
+                                    <Text style={pgStyles.bannerTitle}>Show your best self today</Text>
+                                    <Text style={pgStyles.bannerSubtitle}>
+                                        Update a prompt and write a bio to make it easy for others to start a conversation with you.
                                     </Text>
-                                    <Text style={pgStyles.sectionHint}>· drag to reorder</Text>
                                 </View>
-
-                                <PhotoGrid
-                                    images={getProfileEdit.images}
-                                    containerWidth={containerWidth}
-                                    dropTargetIndex={dropTargetIndex}
-                                    getImageUri={getImageUri}
-                                    onPress={handlePress}
-                                    onRemove={handleRemoveImage}
-                                    onDragStart={handleDragStart}
-                                    onDragMove={handleDragMove}
-                                    onDragEnd={handleDragEnd}
-                                    onLayout={handleGridLayout}
-                                />
+                                <MIcons name="flower-tulip-outline" size={78} color="rgba(255,255,255,0.75)" />
                             </View>
+                        </LinearGradient>
 
-                            {/* ── Vibes Banner ──────────────────────────────── */}
-                            <LinearGradient
-                                colors={['#f95f62', '#f27a9c']}
-                                style={[styles.card, { padding: 0 }]}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 1 }}
+                        {/* ── Full Name (locked) ───────────────────────── */}
+                        <View style={styles.editprofile_inputborder}>
+                            <View style={pgStyles.inputHeader}>
+                                <Text style={styles.editprofile_inputtitle}>Full Name</Text>
+                                <IIcon name="lock-closed" size={15} color="#bbb" />
+                            </View>
+                            <TextInput
+                                style={[styles.editprofile_input, pgStyles.readOnlyInput]}
+                                value={getProfileEdit.fullname}
+                                readOnly
+                            />
+                        </View>
+
+                        {/* ── Age (locked) ─────────────────────────────── */}
+                        <View style={styles.editprofile_inputborder}>
+                            <View style={pgStyles.inputHeader}>
+                                <Text style={styles.editprofile_inputtitle}>Age</Text>
+                                <IIcon name="lock-closed" size={15} color="#bbb" />
+                            </View>
+                            <TextInput
+                                style={[styles.editprofile_input, pgStyles.readOnlyInput]}
+                                value={help.getageFromDOB((getProfileEdit?.age)?.toString() ?? "") ?? '—'}
+                                readOnly
+                            />
+                        </View>
+
+                        {/* ── About ────────────────────────────────────── */}
+                        <View style={styles.editprofile_inputborder}>
+                            <View style={pgStyles.inputHeader}>
+                                <Text style={styles.editprofile_inputtitle}>About you</Text>
+                                <IIcon name="create-outline" size={17} color="#888" />
+                            </View>
+                            <TextInput
+                                style={[styles.editprofile_input, { height: 180 }]}
+                                multiline
+                                numberOfLines={8}
+                                value={getProfileEdit.about}
+                                onChangeText={(e) => updateProfileEdit({ about: e })}
+                                placeholder="Write something about yourself…"
+                                placeholderTextColor="#bbb"
+                                maxLength={400}
+                            />
+                            <Text style={pgStyles.charCounter}>
+                                {getProfileEdit.about?.length ?? 0}/400 characters
+                            </Text>
+                        </View>
+
+                        {/* ── Relationship Intention ───────────────────── */}
+                        <AccordionItem
+                            title="What are your Intentions?"
+                            titleStyle={[styles.editprofile_inputtitle, { paddingLeft: 0 }]}
+                            subtitle={__MAPPER?.bio_intent?.[getProfileEdit.relationshipgoal ?? ""]}
+                            Content={() => (
+                                <RadioGroup
+                                    labelStyle={pgStyles.radioLabel}
+                                    radioButtons={buildRadios(__MAPPER?.bio_intent)}
+                                    containerStyle={{ alignItems: 'flex-start' }}
+                                    onPress={(v) => updateProfileEdit({ relationshipgoal: v })}
+                                    selectedId={getProfileEdit.relationshipgoal?.toString() ?? ""}
+                                />
+                            )}
+                        />
+
+                        {/* ── Gender ───────────────────────────────────── */}
+                        <AccordionItem
+                            title="What is your gender?"
+                            titleStyle={[styles.editprofile_inputtitle, { paddingLeft: 0 }]}
+                            subtitle={__MAPPER?.bio_gender?.[getProfileEdit.gender ?? ""]}
+                            Content={() => (
+                                <RadioGroup
+                                    labelStyle={pgStyles.radioLabel}
+                                    radioButtons={buildRadios(__MAPPER?.bio_gender)}
+                                    containerStyle={{ alignItems: 'flex-start' }}
+                                    onPress={(v) => updateProfileEdit({ gender: v })}
+                                    selectedId={getProfileEdit.gender?.toString() ?? ""}
+                                />
+                            )}
+                        />
+
+                        {/* ── Interests ────────────────────────────────── */}
+                        <View style={styles.editprofile_inputborder}>
+                            <Pressable
+                                style={{ gap: 8 }}
+                                onPress={() => addInterests_ref.current?.snapToIndex(0)}
                             >
-                                <View style={pgStyles.bannerRow}>
-                                    <View style={{ gap: 6, flex: 1 }}>
-                                        <View style={pgStyles.bannerBadge}>
-                                            <MIcons name="heart-multiple-outline" color="#f95f62" size={14} />
-                                            <Text style={pgStyles.bannerBadgeText}>Vibes &amp; Energy</Text>
-                                        </View>
-                                        <Text style={pgStyles.bannerTitle}>Show your best self today</Text>
-                                        <Text style={pgStyles.bannerSubtitle}>
-                                            Update a prompt and write a bio to make it easy for others to start a conversation with you.
-                                        </Text>
+                                <View style={pgStyles.inputHeader}>
+                                    <Text style={styles.editprofile_inputtitle}>
+                                        Interests
+                                        <Text style={pgStyles.countBadge}> {getInterests.length}/{MAX_INTERESTS}</Text>
+                                    </Text>
+                                    <MIcons name="cursor-default-click-outline" size={17} color="#888" />
+                                </View>
+
+                                {getInterests.length === 0 ? (
+                                    <Text style={pgStyles.placeholder}>Tap to select your interests</Text>
+                                ) : (
+                                    <View style={pgStyles.chipRow}>
+                                        {getInterests.map((interest, i) => (
+                                            <View key={i} style={pgStyles.chip}>
+                                                <Text style={pgStyles.chipText}>{interest}</Text>
+                                                <Pressable
+                                                    hitSlop={6}
+                                                    onPress={() => removeInterest(interest)}
+                                                    style={pgStyles.chipRemove}
+                                                >
+                                                    <Text style={pgStyles.chipRemoveText}>×</Text>
+                                                </Pressable>
+                                            </View>
+                                        ))}
                                     </View>
-                                    <MIcons name="flower-tulip-outline" size={78} color="rgba(255,255,255,0.75)" />
-                                </View>
-                            </LinearGradient>
-
-                            {/* ── Full Name (locked) ───────────────────────── */}
-                            <View style={styles.editprofile_inputborder}>
-                                <View style={pgStyles.inputHeader}>
-                                    <Text style={styles.editprofile_inputtitle}>Full Name</Text>
-                                    <IIcon name="lock-closed" size={15} color="#bbb" />
-                                </View>
-                                <TextInput
-                                    style={[styles.editprofile_input, pgStyles.readOnlyInput]}
-                                    value={getProfileEdit.fullname}
-                                    readOnly
-                                />
-                            </View>
-
-                            {/* ── Age (locked) ─────────────────────────────── */}
-                            <View style={styles.editprofile_inputborder}>
-                                <View style={pgStyles.inputHeader}>
-                                    <Text style={styles.editprofile_inputtitle}>Age</Text>
-                                    <IIcon name="lock-closed" size={15} color="#bbb" />
-                                </View>
-                                <TextInput
-                                    style={[styles.editprofile_input, pgStyles.readOnlyInput]}
-                                    value={help.getageFromDOB((getProfileEdit?.age)?.toString() ?? "") ?? '—'}
-                                    readOnly
-                                />
-                            </View>
-
-                            {/* ── About ────────────────────────────────────── */}
-                            <View style={styles.editprofile_inputborder}>
-                                <View style={pgStyles.inputHeader}>
-                                    <Text style={styles.editprofile_inputtitle}>About you</Text>
-                                    <IIcon name="create-outline" size={17} color="#888" />
-                                </View>
-                                <TextInput
-                                    style={[styles.editprofile_input, { height: 180 }]}
-                                    multiline
-                                    numberOfLines={8}
-                                    value={getProfileEdit.about}
-                                    onChangeText={(e) => updateProfileEdit({ about: e })}
-                                    placeholder="Write something about yourself…"
-                                    placeholderTextColor="#bbb"
-                                    maxLength={400}
-                                />
-                                <Text style={pgStyles.charCounter}>
-                                    {getProfileEdit.about?.length ?? 0}/400 characters
-                                </Text>
-                            </View>
-
-                            {/* ── Relationship Intention ───────────────────── */}
-                            <AccordionItem
-                                title="What are your Intentions?"
-                                titleStyle={[styles.editprofile_inputtitle, { paddingLeft: 0 }]}
-                                subtitle={__MAPPER?.bio_intent?.[getProfileEdit.relationshipgoal ?? ""]}
-                                Content={() => (
-                                    <RadioGroup
-                                        labelStyle={pgStyles.radioLabel}
-                                        radioButtons={buildRadios(__MAPPER?.bio_intent)}
-                                        containerStyle={{ alignItems: 'flex-start' }}
-                                        onPress={(v) => updateProfileEdit({ relationshipgoal: v })}
-                                        selectedId={getProfileEdit.relationshipgoal?.toString() ?? ""}
-                                    />
                                 )}
+                            </Pressable>
+                        </View>
+
+                        {/* ── Location (display only) ──────────────────── */}
+                        <View style={styles.editprofile_inputborder}>
+                            <View style={pgStyles.inputHeader}>
+                                <Text style={styles.editprofile_inputtitle}>Location</Text>
+                                <IIcon name="location-outline" size={17} color="#888" />
+                            </View>
+                            <Text style={[styles.editprofile_input, pgStyles.readOnlyInput]}>
+                                {getProfileEdit.city || '—'}
+                            </Text>
+                        </View>
+
+                        {/* ── Hometown ─────────────────────────────────── */}
+                        <View style={styles.editprofile_inputborder}>
+                            <View style={pgStyles.inputHeader}>
+                                <Text style={styles.editprofile_inputtitle}>Hometown</Text>
+                                <IIcon name="create-outline" size={16} color="#888" />
+                            </View>
+                            <TextInput
+                                style={styles.editprofile_input}
+                                value={getProfileEdit.hometown}
+                                onChangeText={(text) => updateProfileEdit({ hometown: text })}
+                                placeholder="Where are you from?"
+                                placeholderTextColor="#bbb"
+                                maxLength={45}
                             />
+                        </View>
 
-                            {/* ── Gender ───────────────────────────────────── */}
-                            <AccordionItem
-                                title="What is your gender?"
-                                titleStyle={[styles.editprofile_inputtitle, { paddingLeft: 0 }]}
-                                subtitle={__MAPPER?.bio_gender?.[getProfileEdit.gender ?? ""]}
-                                Content={() => (
-                                    <RadioGroup
-                                        labelStyle={pgStyles.radioLabel}
-                                        radioButtons={buildRadios(__MAPPER?.bio_gender)}
-                                        containerStyle={{ alignItems: 'flex-start' }}
-                                        onPress={(v) => updateProfileEdit({ gender: v })}
-                                        selectedId={getProfileEdit.gender?.toString() ?? ""}
-                                    />
-                                )}
+                        {/* ── Highest Education ────────────────────────── */}
+                        <AccordionItem
+                            title="Highest Education Achieved?"
+                            titleStyle={[styles.editprofile_inputtitle, { paddingLeft: 0 }]}
+                            subtitle={__MAPPER?.bio_education?.[getProfileEdit.highEducation ?? '']}
+                            Content={() => (
+                                <RadioGroup
+                                    labelStyle={pgStyles.radioLabel}
+                                    radioButtons={buildRadios(__MAPPER?.bio_education)}
+                                    containerStyle={{ alignItems: 'flex-start' }}
+                                    onPress={(id) => updateProfileEdit({ highEducation: id })}
+                                    selectedId={getProfileEdit.highEducation?.toString() ?? ""}
+                                />
+                            )}
+                        />
+
+                        {/* Languages */}
+                        <View style={styles.editprofile_inputborder}>
+                            <View style={pgStyles.inputHeader}>
+                                <Text style={styles.editprofile_inputtitle}>Languages</Text>
+                                <IIcon name="language-outline" size={17} color="#888" />
+                            </View>
+                            <TextInput
+                                style={styles.editprofile_input}
+                                value={getProfileEdit.languages.join(', ')}
+                                onChangeText={(text) => updateProfileEdit({
+                                    languages: text
+                                        .split(',')
+                                        .map((item) => item.trim())
+                                        .filter(Boolean)
+                                })}
+                                placeholder="Languages you speak (comma separated)"
+                                placeholderTextColor="#bbb"
                             />
+                        </View>
 
-                            {/* ── Interests ────────────────────────────────── */}
-                            <View style={styles.editprofile_inputborder}>
-                                <Pressable
-                                    style={{ gap: 8 }}
-                                    onPress={() => addInterests_ref.current?.snapToIndex(0)}
-                                >
-                                    <View style={pgStyles.inputHeader}>
-                                        <Text style={styles.editprofile_inputtitle}>
-                                            Interests
-                                            <Text style={pgStyles.countBadge}> {getInterests.length}/{MAX_INTERESTS}</Text>
-                                        </Text>
-                                        <MIcons name="cursor-default-click-outline" size={17} color="#888" />
-                                    </View>
-
-                                    {getInterests.length === 0 ? (
-                                        <Text style={pgStyles.placeholder}>Tap to select your interests</Text>
-                                    ) : (
-                                        <View style={pgStyles.chipRow}>
-                                            {getInterests.map((interest, i) => (
-                                                <View key={i} style={pgStyles.chip}>
-                                                    <Text style={pgStyles.chipText}>{interest}</Text>
-                                                    <Pressable
-                                                        hitSlop={6}
-                                                        onPress={() => removeInterest(interest)}
-                                                        style={pgStyles.chipRemove}
-                                                    >
-                                                        <Text style={pgStyles.chipRemoveText}>×</Text>
-                                                    </Pressable>
-                                                </View>
-                                            ))}
-                                        </View>
-                                    )}
-                                </Pressable>
+                        {/* School Attended */}
+                        <View style={styles.editprofile_inputborder}>
+                            <View style={pgStyles.inputHeader}>
+                                <Text style={styles.editprofile_inputtitle}>School Attended</Text>
+                                <IIcon name="create-outline" size={16} color="#888" />
                             </View>
-
-                            {/* ── Location (display only) ──────────────────── */}
-                            <View style={styles.editprofile_inputborder}>
-                                <View style={pgStyles.inputHeader}>
-                                    <Text style={styles.editprofile_inputtitle}>Location</Text>
-                                    <IIcon name="location-outline" size={17} color="#888" />
-                                </View>
-                                <Text style={[styles.editprofile_input, pgStyles.readOnlyInput]}>
-                                    {getProfileEdit.city || '—'}
-                                </Text>
-                            </View>
-
-                            {/* ── Hometown ─────────────────────────────────── */}
-                            <View style={styles.editprofile_inputborder}>
-                                <View style={pgStyles.inputHeader}>
-                                    <Text style={styles.editprofile_inputtitle}>Hometown</Text>
-                                    <IIcon name="create-outline" size={16} color="#888" />
-                                </View>
-                                <TextInput
-                                    style={styles.editprofile_input}
-                                    value={getProfileEdit.hometown}
-                                    onChangeText={(text) => updateProfileEdit({ hometown: text })}
-                                    placeholder="Where are you from?"
-                                    placeholderTextColor="#bbb"
-                                    maxLength={45}
-                                />
-                            </View>
-
-                            {/* ── Highest Education ────────────────────────── */}
-                            <AccordionItem
-                                title="Highest Education Achieved?"
-                                titleStyle={[styles.editprofile_inputtitle, { paddingLeft: 0 }]}
-                                subtitle={__MAPPER?.bio_education?.[getProfileEdit.highEducation ?? '']}
-                                Content={() => (
-                                    <RadioGroup
-                                        labelStyle={pgStyles.radioLabel}
-                                        radioButtons={buildRadios(__MAPPER?.bio_education)}
-                                        containerStyle={{ alignItems: 'flex-start' }}
-                                        onPress={(id) => updateProfileEdit({ highEducation: id })}
-                                        selectedId={getProfileEdit.highEducation?.toString() ?? ""}
-                                    />
-                                )}
+                            <TextInput
+                                style={styles.editprofile_input}
+                                value={getProfileEdit.schoolattended}
+                                onChangeText={(text) => updateProfileEdit({ schoolattended: text })}
+                                placeholder="What school did you attend?"
+                                placeholderTextColor="#bbb"
+                                maxLength={45}
                             />
+                        </View>
 
-                            {/* Languages */}
-                            <View style={styles.editprofile_inputborder}>
-                                <View style={pgStyles.inputHeader}>
-                                    <Text style={styles.editprofile_inputtitle}>Languages</Text>
-                                    <IIcon name="language-outline" size={17} color="#888" />
-                                </View>
-                                <TextInput
-                                    style={styles.editprofile_input}
-                                    value={getProfileEdit.languages.join(', ')}
-                                    onChangeText={(text) => updateProfileEdit({
-                                        languages: text
-                                            .split(',')
-                                            .map((item) => item.trim())
-                                            .filter(Boolean)
-                                    })}
-                                    placeholder="Languages you speak (comma separated)"
-                                    placeholderTextColor="#bbb"
-                                />
-                            </View>
+                        {/* ── Prompts ──────────────────────────────────── */}
+                        <View style={[styles.editprofile_inputborder, { padding: 10, gap: 8 }]}>
+                            <Text style={styles.editprofile_inputtitle}>
+                                Prompts
+                                <Text style={pgStyles.countBadge}> {getPrompts.length}/{MAX_PROMPTS}</Text>
+                            </Text>
 
-                            {/* School Attended */}
-                            <View style={styles.editprofile_inputborder}>
-                                <View style={pgStyles.inputHeader}>
-                                    <Text style={styles.editprofile_inputtitle}>School Attended</Text>
-                                    <IIcon name="create-outline" size={16} color="#888" />
-                                </View>
-                                <TextInput
-                                    style={styles.editprofile_input}
-                                    value={getProfileEdit.schoolattended}
-                                    onChangeText={(text) => updateProfileEdit({ schoolattended: text })}
-                                    placeholder="What school did you attend?"
-                                    placeholderTextColor="#bbb"
-                                    maxLength={45}
-                                />
-                            </View>
-
-                            {/* ── Prompts ──────────────────────────────────── */}
-                            <View style={[styles.editprofile_inputborder, { padding: 10, gap: 8 }]}>
-                                <Text style={styles.editprofile_inputtitle}>
-                                    Prompts
-                                    <Text style={pgStyles.countBadge}> {getPrompts.length}/{MAX_PROMPTS}</Text>
-                                </Text>
-
-                                {getPrompts.map((item, index) => (
-                                    <View key={index} style={pgStyles.promptCard}>
-                                        <Pressable
-                                            style={pgStyles.promptRemove}
-                                            onPress={() => removePrompt(index)}
-                                            hitSlop={6}
-                                        >
-                                            <IIcon name="close-circle" size={20} color="#ff4444" />
-                                        </Pressable>
-                                        <Text style={pgStyles.promptQuestion}>{item?.q}</Text>
-                                        <TextInput
-                                            style={[styles.editprofile_input, pgStyles.promptAnswer]}
-                                            value={item?.a}
-                                            placeholder={item?.q}
-                                            placeholderTextColor="#bbb"
-                                            multiline
-                                            maxLength={140}
-                                            onChangeText={text => {
-                                                setPrompts(prev => {
-                                                    const updated = [...prev];
-                                                    updated[index] = { ...updated[index], a: text };
-                                                    return updated;
-                                                });
-                                            }}
-                                        />
-                                    </View>
-                                ))}
-
-                                {getPrompts.length < MAX_PROMPTS && (
+                            {getPrompts.map((item, index) => (
+                                <View key={index} style={pgStyles.promptCard}>
                                     <Pressable
-                                        style={pgStyles.addPromptBtn}
-                                        onPress={() => addNewPrompt_ref.current?.snapToIndex(0)}
+                                        style={pgStyles.promptRemove}
+                                        onPress={() => removePrompt(index)}
+                                        hitSlop={6}
                                     >
-                                        <MIcons name="plus-circle-outline" size={18} color="#f95f62" />
-                                        <Text style={pgStyles.addPromptText}>Add a Prompt</Text>
+                                        <IIcon name="close-circle" size={20} color="#ff4444" />
                                     </Pressable>
-                                )}
-                            </View>
-
-                            {/* ── Life Style Accordions ─────────────────────── */}
-                            {[
-                                { title: 'Do you have children?', map: __MAPPER?.bio_children, state: getProfileEdit.children, set: (id: string) => updateProfileEdit({ children: id }) },
-                                { title: 'Do you smoke?', map: __MAPPER?.bio_smoking, state: getProfileEdit.smoking, set: (id: string) => updateProfileEdit({ smoking: id }) },
-                                { title: 'Do you drink?', map: __MAPPER?.bio_drinking, state: getProfileEdit.drinking, set: (id: string) => updateProfileEdit({ drinking: id }) },
-                                { title: 'Do you have a pet?', map: __MAPPER?.bio_pets, state: getProfileEdit.pets, set: (id: string) => updateProfileEdit({ pets: id }) },
-                                { title: 'What is your religion?', map: __MAPPER?.bio_religion, state: getProfileEdit.religion, set: (id: string) => updateProfileEdit({ religion: id }) },
-                                { title: 'What is your ethnicity?', map: __MAPPER?.bio_ethnicity, state: getProfileEdit.ethnicity, set: (id: string) => updateProfileEdit({ ethnicity: id }) },
-                                { title: 'Describe your body type', map: __MAPPER?.bio_bodytype, state: getProfileEdit.bodytype, set: (id: string) => updateProfileEdit({ bodytype: id }) },
-                                { title: 'Political Views?', map: __MAPPER?.bio_politicalview, state: getProfileEdit.politicalview, set: (id: string) => updateProfileEdit({ politicalview: id }) },
-                            ].map(({ title, map, state, set }) => (
-                                <AccordionItem
-                                    key={title}
-                                    title={title}
-                                    titleStyle={[styles.editprofile_inputtitle, { paddingLeft: 0 }]}
-                                    subtitle={(map as Record<string, string>)?.[state ?? '']}
-                                    Content={() => (
-                                        <RadioGroup
-                                            labelStyle={pgStyles.radioLabel}
-                                            radioButtons={buildRadios(map as Record<string, string>)}
-                                            containerStyle={{ alignItems: 'flex-start' }}
-                                            onPress={set}
-                                            selectedId={state?.toString() ?? undefined}
-                                        />
-                                    )}
-                                />
+                                    <Text style={pgStyles.promptQuestion}>{item?.q}</Text>
+                                    <TextInput
+                                        style={[styles.editprofile_input, pgStyles.promptAnswer]}
+                                        value={item?.a}
+                                        placeholder={item?.q}
+                                        placeholderTextColor="#bbb"
+                                        multiline
+                                        maxLength={140}
+                                        onChangeText={text => {
+                                            setPrompts(prev => {
+                                                const updated = [...prev];
+                                                updated[index] = { ...updated[index], a: text };
+                                                return updated;
+                                            });
+                                        }}
+                                    />
+                                </View>
                             ))}
 
+                            {getPrompts.length < MAX_PROMPTS && (
+                                <Pressable
+                                    style={pgStyles.addPromptBtn}
+                                    onPress={() => addNewPrompt_ref.current?.snapToIndex(0)}
+                                >
+                                    <MIcons name="plus-circle-outline" size={18} color="#f95f62" />
+                                    <Text style={pgStyles.addPromptText}>Add a Prompt</Text>
+                                </Pressable>
+                            )}
                         </View>
-                    </ScrollView>
-                </KeyboardAvoidingView>
-            </View>
+
+                        {/* ── Life Style Accordions ─────────────────────── */}
+                        {[
+                            { title: 'Do you have children?', map: __MAPPER?.bio_children, state: getProfileEdit.children, set: (id: string) => updateProfileEdit({ children: id }) },
+                            { title: 'Do you smoke?', map: __MAPPER?.bio_smoking, state: getProfileEdit.smoking, set: (id: string) => updateProfileEdit({ smoking: id }) },
+                            { title: 'Do you drink?', map: __MAPPER?.bio_drinking, state: getProfileEdit.drinking, set: (id: string) => updateProfileEdit({ drinking: id }) },
+                            { title: 'Do you have a pet?', map: __MAPPER?.bio_pets, state: getProfileEdit.pets, set: (id: string) => updateProfileEdit({ pets: id }) },
+                            { title: 'What is your religion?', map: __MAPPER?.bio_religion, state: getProfileEdit.religion, set: (id: string) => updateProfileEdit({ religion: id }) },
+                            { title: 'What is your ethnicity?', map: __MAPPER?.bio_ethnicity, state: getProfileEdit.ethnicity, set: (id: string) => updateProfileEdit({ ethnicity: id }) },
+                            { title: 'Describe your body type', map: __MAPPER?.bio_bodytype, state: getProfileEdit.bodytype, set: (id: string) => updateProfileEdit({ bodytype: id }) },
+                            { title: 'Political Views?', map: __MAPPER?.bio_politicalview, state: getProfileEdit.politicalview, set: (id: string) => updateProfileEdit({ politicalview: id }) },
+                        ].map(({ title, map, state, set }) => (
+                            <AccordionItem
+                                key={title}
+                                title={title}
+                                titleStyle={[styles.editprofile_inputtitle, { paddingLeft: 0 }]}
+                                subtitle={(map as Record<string, string>)?.[state ?? '']}
+                                Content={() => (
+                                    <RadioGroup
+                                        labelStyle={pgStyles.radioLabel}
+                                        radioButtons={buildRadios(map as Record<string, string>)}
+                                        containerStyle={{ alignItems: 'flex-start' }}
+                                        onPress={set}
+                                        selectedId={state?.toString() ?? undefined}
+                                    />
+                                )}
+                            />
+                        ))}
+
+                    </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
+
 
             {/* ── Add New Prompt Bottom Sheet ───────────────────────────────── */}
             <BottomSheet
@@ -1175,7 +1179,7 @@ export function Screen_editprofile({ navigation }: { navigation: any }) {
                     </ScrollView>
                 </BottomSheetView>
             </BottomSheet>
-        </SafeAreaView>
+        </SafeAreaView >
     );
 }
 
