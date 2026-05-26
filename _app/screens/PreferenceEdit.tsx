@@ -279,10 +279,10 @@ export function Screen_editpreference({ navigation }: { navigation: any }) {
                                 </View>
                                 <Text style={localStyles.paywallTitle}>Unlock More filters</Text>
                                 <Text style={localStyles.paywallSubTitle}>
-                                    Premium unlocks advanced matching by habits, lifestyle, education, ethnicity, religion, pets, and more.
+                                    Upgrading unlocks advanced matching by habits, lifestyle, education, ethnicity, religion, pets, and more.
                                 </Text>
                                 <Pressable style={localStyles.upgradeBtn} onPress={() => navigation.push(namer.navigation.subscription)}>
-                                    <Text style={localStyles.upgradeBtnText}>Upgrade to Premium</Text>
+                                    <Text style={localStyles.upgradeBtnText}>Upgrade</Text>
                                 </Pressable>
                             </View>
                         ) : null}

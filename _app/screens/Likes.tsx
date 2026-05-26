@@ -11,6 +11,25 @@ import { useHeaderHeight } from '@react-navigation/elements';
 import FastImage from 'react-native-fast-image';
 import LottieView from 'lottie-react-native';
 
+type LikesFilter = 'all' | 'verifiedOnly';
+
+const likesFilters: { id: LikesFilter; label: string }[] = [
+    { id: 'all', label: 'All' },
+    { id: 'verifiedOnly', label: 'Verified only' },
+];
+
+const isVerifiedLike = (item: any) => {
+    return item?.verified === true || item?.user_verified === 1 || item?.user_verified === '1' || item?.user_verfied === 1 || item?.user_verfied === '1';
+};
+
+const isSuperlike = (item: any) => {
+    return item?.is_superlike === true || item?.match_status === 5 || item?.match_status === '5';
+};
+
+const getAllLikesSortPriority = (item: any) => {
+    return (isVerifiedLike(item) ? 2 : 0) + (isSuperlike(item) ? 1 : 0);
+};
+
 export function Screen_likes({ navigation }: { navigation: any }) {
     const __MAPPER = llStorage.CONFIG.get()?.mapper;
 
@@ -20,7 +39,7 @@ export function Screen_likes({ navigation }: { navigation: any }) {
  
     const headerHeight = useHeaderHeight();
     const [getNewLikes, setNewLikes] = useState<any>(null);
-    const [activeFilter, setActiveFilter] = useState<'all' | 'verifiedOnly'   >('all');
+    const [activeFilter, setActiveFilter] = useState<LikesFilter>('all');
     const [layout, setLayout] = useState({
         numColumns: 2,
         itemWidth: 0,
@@ -120,16 +139,19 @@ export function Screen_likes({ navigation }: { navigation: any }) {
         return () => subscription?.remove();
     }, []);
 
-    const isSuperlike = (item: any) => {
-        return item?.is_superlike === true || item?.match_status === 5 || item?.match_status === '5';
-    };
-
-     
     const filteredLikes = useMemo(() => {
         let list = Array.isArray(getNewLikes) ? [...getNewLikes] : [];
         if (activeFilter === 'verifiedOnly') {
-            list = list.filter((x: any) => x?.verified || x?.user_verfied === 1);
-        }  
+            list = list.filter(isVerifiedLike);
+        } else {
+            list = list
+                .map((item: any, index: number) => ({ item, index }))
+                .sort((a, b) => {
+                    const priorityDiff = getAllLikesSortPriority(b.item) - getAllLikesSortPriority(a.item);
+                    return priorityDiff || a.index - b.index;
+                })
+                .map(({ item }) => item);
+        }
         return list;
     }, [activeFilter, getNewLikes]);
 
@@ -140,8 +162,14 @@ export function Screen_likes({ navigation }: { navigation: any }) {
 
     const filteredLikesCount = filteredLikes.length;
 
+    useEffect(() => {
+        setVisibleLikes(LIKES_PAGE_SIZE);
+        setIsLoadingMore(filteredLikesCount > LIKES_PAGE_SIZE);
+    }, [activeFilter, filteredLikesCount]);
+
     const handleEndReached = useCallback(() => {
         if (!activeSubscription) {
+            setIsLoadingMore(false);
             navigation.navigate(namer.navigation.subscription);
             return;
         }
@@ -210,14 +238,10 @@ export function Screen_likes({ navigation }: { navigation: any }) {
                             </View>
 
                             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                                {[
-                                    { id: 'all', label: 'Super Likes' },
-                                     { id: 'verifiedOnly', label: 'Verified only' },
-
-                                ].map((f) => {
+                                {likesFilters.map((f) => {
                                     const active = activeFilter === f.id;
                                     return (
-                                        <Pressable key={f.id} onPress={() => setActiveFilter(f.id as any)} style={{
+                                        <Pressable key={f.id} onPress={() => setActiveFilter(f.id)} style={{
                                             paddingHorizontal: 12,
                                             paddingVertical: 9,
                                             borderRadius: 16,
@@ -261,7 +285,7 @@ export function Screen_likes({ navigation }: { navigation: any }) {
                                                     <Text style={[stylesoy.pillText, { color: '#fff' }]}>Super Like</Text>
                                                 </View>
                                             )}
-                                            {item?.verified && (
+                                            {isVerifiedLike(item) && (
                                                 <View style={[stylesoy.pill, { borderRadius: 15, paddingHorizontal: 3, paddingVertical: 3 }]}>
                                                     <IIcon name="checkmark-done-circle-sharp" size={20} color="rgb(100, 128, 254)" style={{ backgroundColor: "#fff", borderRadius: 15 }} />
                                                 </View>

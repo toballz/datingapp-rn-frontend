@@ -146,7 +146,7 @@ const MainApp: React.FC = () => {
             (
               <>
                 <Stack.Screen name={namer.navigation.login} component={Auth_Login} options={{ headerShown: false }} />
-                <Stack.Screen name={namer.navigation.signup} component={Auth_Signup} options={{ headerShown: true }} />
+                <Stack.Screen name={namer.navigation.signup} component={Auth_Signup} options={{ headerShown: false }} />
               </>
             ) : (
               <>

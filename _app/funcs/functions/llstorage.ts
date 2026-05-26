@@ -236,4 +236,15 @@ export class cacheStorage {
 
         return this.productsLoadingPromise;
     }
+
+
+
+
+    // app json data
+    private static mapperMemoryCache: any = null;
+    private static mapperLoadingPromise: Promise<any> | null = null;
+    // getWhat = ["intent","gender","interests"]
+    public static getMapper = (forceRefresh = false,getWhat = []): Promise<any> => {
+        return  ;
+    }
 } 
