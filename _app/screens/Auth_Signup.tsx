@@ -1,15 +1,21 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {Animated,Image,KeyboardAvoidingView,Platform,ScrollView,StyleSheet,Text,TextInput,TouchableOpacity,View,} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { launchImageLibrary } from 'react-native-image-picker';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CarouselRef, ControlledCarousel } from '../funcs/customCarousel';
-import { cacheStorage, navigationRef, screenWidth } from '../funcs/functions';
-import { namer } from '../funcs/static';
+import { __init__app, cacheStorage, getCurrentLocation, hostServer, navigationRef, screenWidth } from '../funcs/functions';
 import { Toastx } from '../funcs/customNotification';
+import { Loaderx } from '../funcs/functions_stateful';
+import { namer } from '../funcs/static';
+import { sessionManager } from '../funcs/SessionContext';
 
 type SignupData = {
+  phoneNumber: string;
+  verificationCode: string;
+  phoneVerified: boolean;
   intent: string;
   firstName: string;
   birthday: string;
@@ -17,8 +23,9 @@ type SignupData = {
   interestedIn: string;
   photos: string[];
   bio: string;
-  interests: string[];
+  // interests: string[];
   locationEnabled: boolean | null;
+  location: any | null;
 };
 
 type OptionCardProps = {
@@ -46,18 +53,18 @@ const fallbackOptions = {
   ]),
   gender: mapLabelsToOptions(['Woman', 'Man', 'Non-binary' ]),
   interestedIn: mapLabelsToOptions(['Women', 'Men', 'Everyone', 'Non-binary people']),
-  interests: mapLabelsToOptions([
-    'Music',
-    'Gym',
-    'Travel',
-    'Gaming',
-    'Food',
-    'Movies',
-    'Fashion',
-    'Books',
-    'Anime',
-    'Startups',
-  ]),
+  // interests: mapLabelsToOptions([
+  //   'Music',
+  //   'Gym',
+  //   'Travel',
+  //   'Gaming',
+  //   'Food',
+  //   'Movies',
+  //   'Fashion',
+  //   'Books',
+  //   'Anime',
+  //   'Startups',
+  // ]),
 };
 
 const promptExamples = [
@@ -93,7 +100,13 @@ const mapperToOptions = (mapper: any, keys: string[], fallback: MapperOption[]) 
   return fallback;
 };
 
-const initialSignupData: SignupData = {
+
+
+export const Auth_Signup = ({route}:{route: any}) => {
+  const initialSignupData: SignupData = {
+  phoneNumber:route.params?.phone ?? '',
+  verificationCode: '',
+  phoneVerified: false,
   intent: '',
   firstName: '',
   birthday: '',
@@ -101,18 +114,22 @@ const initialSignupData: SignupData = {
   interestedIn: '',
   photos: [],
   bio: '',
-  interests: [],
+  // interests: [],
   locationEnabled: null,
+  location: null,
 };
 
-export const Auth_Signup = () => {
-  const navigation = useNavigation<any>();
+ 
   const carouselRef = useRef<CarouselRef>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
   const [step, setStep] = useState(0);
   const [signupData, setSignupData] = useState<SignupData>(initialSignupData);
   const [getMapper , setMapperOptions] = useState(fallbackOptions);
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [verificationSendCount, setVerificationSendCount] = useState(0);
+  const [resendCooldownSeconds, setResendCooldownSeconds] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
  
  
@@ -123,10 +140,10 @@ export const Auth_Signup = () => {
       { eyebrow: 'Basics', title: 'Tell us about you' },
       { eyebrow: 'Photos', title: 'Add your best shots' },
       { eyebrow: 'Bio', title: 'Add a spark' },
-      { eyebrow: 'Interests', title: 'Pick your favorites' },
+      // { eyebrow: 'Interests', title: 'Pick your favorites' },
       { eyebrow: 'Nearby', title: 'Find people nearby.' },
-      { eyebrow: 'Ready', title: 'Your profile is ready.' },
-    ],
+      { eyebrow: 'Phone', title: 'Verify your number' },
+],
     [],
   );
 
@@ -138,7 +155,7 @@ export const Auth_Signup = () => {
     let mounted = true;
 
     cacheStorage
-      .getMapper(false, ['intent', 'gender', 'interested_in', 'interests'])
+      .getMapper(false, ['intent', 'gender', 'interested_in'])
       .then(mapper => {
         if (!mounted || !mapper) return;
 
@@ -146,7 +163,7 @@ export const Auth_Signup = () => {
           intent: mapperToOptions(mapper, ['intent'], fallbackOptions.intent),
           gender: mapperToOptions(mapper, ['gender'], fallbackOptions.gender),
           interestedIn: mapperToOptions(mapper, ['interested_in', 'interestedIn'], fallbackOptions.interestedIn),
-          interests: mapperToOptions(mapper, ['interests', 'interest'], fallbackOptions.interests),
+          // interests: mapperToOptions(mapper, ['interests', 'interest'], fallbackOptions.interests),
         });
       })
       .catch(error => {
@@ -157,6 +174,16 @@ export const Auth_Signup = () => {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (resendCooldownSeconds <= 0) return;
+
+    const timer = setInterval(() => {
+      setResendCooldownSeconds(seconds => Math.max(seconds - 1, 0));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [resendCooldownSeconds]);
 
   const animatePageChange = (nextStep: number) => {
     setStep(nextStep);
@@ -201,7 +228,8 @@ export const Auth_Signup = () => {
   };
 
   const validateStep = () => {
-    // Keep required checks local to the active step so the flow stays low-friction.
+
+
     if (step === 0 && !signupData.intent) {
       Toastx.show({ type: 'error', message: 'Choose what you are looking for.' });
       return false;
@@ -222,16 +250,20 @@ export const Auth_Signup = () => {
       }
     }
 
-    if (step === 2 && signupData.photos.length < 1) {
-      Toastx.show({ type: 'error', message: 'Add at least one photo.' });
+    if (step === 2 && signupData.photos.length < 2) {
+      Toastx.show({ type: 'error', message: 'Add at least two photos.' });
       return false;
     }
 
-    if (step === 4 && signupData.interests.length < 3) {
-      Toastx.show({ type: 'error', message: 'Pick at least 3 interests.' });
+    // if (step === 4 && signupData.interests.length < 3) {
+    //   Toastx.show({ type: 'error', message: 'Pick at least 3 interests.' });
+    //   return false;
+    // }
+    // Keep required checks local to the active step so the flow stays low-friction.
+    if (step === 5 && !signupData.phoneVerified) {
+      Toastx.show({ type: 'error', message: 'Verify your phone number to continue.' });
       return false;
     }
-
     return true;
   };
 
@@ -248,12 +280,7 @@ export const Auth_Signup = () => {
     animatePageChange(previousStep);
   };
 
-  const finishSignup = () => {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: namer.navigation.home }],
-    });
-  };
+ 
 
   const addPhoto = async () => {
     if (signupData.photos.length >= 6) {
@@ -299,19 +326,155 @@ export const Auth_Signup = () => {
     updateSignupData('photos', nextPhotos);
   };
 
-  const toggleInterest = (interest: string) => {
-    const exists = signupData.interests.includes(interest);
-    const nextInterests = exists
-      ? signupData.interests.filter(item => item !== interest)
-      : [...signupData.interests, interest];
-    updateSignupData('interests', nextInterests);
-  };
+  // const toggleInterest = (interest: string) => {
+  //   const exists = signupData.interests.includes(interest);
+  //   const nextInterests = exists
+  //     ? signupData.interests.filter(item => item !== interest)
+  //     : [...signupData.interests, interest];
+  //   updateSignupData('interests', nextInterests);
+  // };
 
   const formatBirthday = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 8);
     if (digits.length <= 4) return digits;
     if (digits.length <= 6) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
     return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
+  };
+
+  const formatPhoneNumber = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 10);
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  };
+
+  const getSignupPhoneNumber = () => {
+    const digits = signupData.phoneNumber.replace(/\D/g, '');
+    return digits.length === 11 && digits.startsWith('1') ? digits.slice(1) : digits;
+  };
+
+  const formatCooldown = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  const buildLocationPayload = (position: any) => ({
+    latd: position?.coords?.latitude,
+    long: position?.coords?.longitude,
+    accuracy: position?.coords?.accuracy,
+    altitude: position?.coords?.altitude,
+    altitudeAccuracy: position?.coords?.altitudeAccuracy,
+    heading: position?.coords?.heading,
+    speed: position?.coords?.speed,
+    timestamp: position?.timestamp,
+  });
+
+  const signupPayload = (vcode?: string) => ({
+    user_phone: getSignupPhoneNumber(),
+    vcode,
+    first_name: signupData.firstName,
+    birthday: signupData.birthday,
+    gender: signupData.gender,
+    interested_in: signupData.interestedIn,
+    intent: signupData.intent,
+    photos: signupData.photos,
+    bio: signupData.bio,
+    // interests: signupData.interests,
+    location: signupData.location,
+  });
+
+  const sendVerificationCode = async () => {
+    if (resendCooldownSeconds > 0 || isSubmitting) return;
+
+    if (getSignupPhoneNumber().length !== 10) {
+      Toastx.show({ type: 'error', message: 'Enter a valid phone number.' });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`${hostServer()}/api/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(signupPayload()),
+      });
+      const result = await response.json();
+
+      if (result?.code !== 200) {
+        Toastx.show({ type: 'error', message: result?.message ?? 'Could not send verification code.' });
+        return;
+      }
+
+      const nextSendCount = verificationSendCount + 1;
+      setVerificationSendCount(nextSendCount);
+      setResendCooldownSeconds(90 * nextSendCount);
+      setVerificationSent(true);
+      if (result?.dev_code) updateSignupData('verificationCode', String(result.dev_code));
+      updateSignupData('phoneVerified', false);
+      Toastx.show({ type: 'success', message: result?.message ?? 'Verification code sent.' });
+    } catch {
+      Toastx.show({ type: 'error', message: 'Could not send verification code.' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const confirmVerificationCode = async () => {
+    if (signupData.verificationCode.replace(/\D/g, '').length !== 6) {
+      Toastx.show({ type: 'error', message: 'Enter the 6-digit code.' });
+      return false;
+    }
+
+    if (isSubmitting) return false;
+
+    setIsSubmitting(true);
+    Loaderx.show();
+    try {
+      const response = await fetch(`${hostServer()}/api/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(signupPayload(signupData.verificationCode)),
+      });
+      const result = await response.json();
+
+      if (result?.code !== 200) {
+        Toastx.show({ type: 'error', message: result?.message ?? 'Signup failed.' });
+        return false;
+      }
+
+      const auth = response.headers.get('x-omi-auth') ?? '';
+      const hash = response.headers.get('x-omi-hash') ?? '';
+      if (!auth || !hash) {
+        Toastx.show({ type: 'error', message: 'Signup succeeded, but login session was not returned.' });
+        return false;
+      }
+      await AsyncStorage.setItem(namer.storage.sessionId, auth);
+      await AsyncStorage.setItem(namer.storage.sessionIdVerify, hash);
+      await sessionManager.updateSession({
+        x_omi_payload: auth,
+        x_omi_payload_hash: hash,
+      });
+      await Promise.all([
+        __init__app(),
+        cacheStorage.getCurrentUserProfile(true),
+        cacheStorage.getProducts(true),
+      ]);
+
+      updateSignupData('phoneVerified', true);
+      Toastx.show({ type: 'success', message: 'Signup complete.' });
+      navigation.reset({
+        index: 0,
+        routes: [{ name: namer.navigation.home }],
+      });
+      return true;
+    } catch {
+      Toastx.show({ type: 'error', message: 'Signup failed.' });
+      return false;
+    } finally {
+      Loaderx.hide();
+      setIsSubmitting(false);
+    }
   };
 
   const renderStepShell = (children: React.ReactNode) => (
@@ -406,7 +569,7 @@ export const Auth_Signup = () => {
   const renderPhotosScreen = () =>
     renderStepShell(
       <StepScroll>
-        <StepHeader eyebrow="Photos" title="Add up to 6 photos" helper="At least one photo is required." />
+        <StepHeader eyebrow="Photos" title="Add up to 6 photos" helper="At least two photos are required." />
         <View style={stylesx.photoGrid}>
           {Array.from({ length: 6 }).map((_, index) => {
             const photoUri = signupData.photos[index];
@@ -477,24 +640,24 @@ export const Auth_Signup = () => {
       </StepScroll>,
     );
 
-  const renderInterestsScreen = () =>
-    renderStepShell(
-      <StepScroll>
-        <StepHeader eyebrow="Interests" title="Choose at least 3" helper={`${signupData.interests.length}/3 selected`} />
-        <View style={stylesx.card}>
-          <View style={stylesx.chipWrap}>
-            {getMapper.interests.map(interest => (
-              <Chip
-                key={interest.value}
-                label={interest.label}
-                selected={signupData.interests.includes(interest.value)}
-                onPress={() => toggleInterest(interest.value)}
-              />
-            ))}
-          </View>
-        </View>
-      </StepScroll>,
-    );
+  // const renderInterestsScreen = () =>
+  //   renderStepShell(
+  //     <StepScroll>
+  //       <StepHeader eyebrow="Interests" title="Choose at least 3" helper={`${signupData.interests.length}/3 selected`} />
+  //       <View style={stylesx.card}>
+  //         <View style={stylesx.chipWrap}>
+  //           {getMapper.interests.map(interest => (
+  //             <Chip
+  //               key={interest.value}
+  //               label={interest.label}
+  //               selected={signupData.interests.includes(interest.value)}
+  //               onPress={() => toggleInterest(interest.value)}
+  //             /> 
+  //           ))}
+  //         </View>
+  //       </View>
+  //     </StepScroll>,
+  //   );
 
   const renderLocationScreen = () =>
     renderStepShell(
@@ -506,9 +669,21 @@ export const Auth_Signup = () => {
         <Text style={stylesx.heroCopy}>We use your location to show better matches.</Text>
         <TouchableOpacity
           style={stylesx.primaryButton}
-          onPress={() => {
-            updateSignupData('locationEnabled', true);
-            goNext();
+          onPress={async () => {
+            if (isSubmitting) return;
+            setIsSubmitting(true);
+            Loaderx.show();
+            try {
+              const location = await getCurrentLocation();
+              updateSignupData('location', buildLocationPayload(location));
+              updateSignupData('locationEnabled', true);
+              goNext();
+            } catch {
+              Toastx.show({ type: 'error', message: 'Unable to get current location.' });
+            } finally {
+              Loaderx.hide();
+              setIsSubmitting(false);
+            }
           }}>
           <Text style={stylesx.primaryButtonText}>Enable Location</Text>
         </TouchableOpacity>
@@ -523,20 +698,68 @@ export const Auth_Signup = () => {
       </View>,
     );
 
-  const renderCompleteScreen = () =>
+  const verifyPhonenumber = () =>
     renderStepShell(
-      <View style={stylesx.centerPage}>
-        <View style={stylesx.completeIcon}>
-          <MaterialCommunityIcons name="check" size={46} color="#ffffff" />
-        </View>
-        <Text style={stylesx.heroTitle}>Your profile is ready.</Text>
-        <Text style={stylesx.heroCopy}>
-          Nice. Your first set of matches is waiting in the feed.
-        </Text>
-        <TouchableOpacity style={stylesx.primaryButton} onPress={finishSignup}>
-          <Text style={stylesx.primaryButtonText}>Start Matching</Text>
-        </TouchableOpacity>
-      </View>,
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <StepScroll>
+          <StepHeader eyebrow="Phone" title="Verify your number" helper="We'll use this to keep accounts real." />
+          <View style={stylesx.card}>
+            <FieldLabel label="Phone number" />
+            <TextInput
+              style={stylesx.input}
+              placeholder="(555) 123-4567"
+              placeholderTextColor="#9a9aae"
+              value={signupData.phoneNumber}
+              onChangeText={value => {
+                updateSignupData('phoneNumber', formatPhoneNumber(value));
+                updateSignupData('phoneVerified', false);
+                setVerificationSent(false);
+                setVerificationSendCount(0);
+                setResendCooldownSeconds(0);
+              }}
+              keyboardType="phone-pad"
+              maxLength={14}
+            />
+            <TouchableOpacity
+              style={[stylesx.secondaryButton, resendCooldownSeconds > 0 && stylesx.secondaryButtonDisabled]}
+              onPress={sendVerificationCode}
+              disabled={resendCooldownSeconds > 0}>
+              <MaterialCommunityIcons name="message-processing-outline" size={20} color="#e8546f" />
+              <Text style={stylesx.secondaryButtonText}>
+                {resendCooldownSeconds > 0
+                  ? `Resend in ${formatCooldown(resendCooldownSeconds)}`
+                  : verificationSent
+                    ? 'Resend Code'
+                    : 'Send Code'}
+              </Text>
+            </TouchableOpacity>
+
+            {verificationSent && (
+              <>
+                <FieldLabel label="Verification code" helper="6 digits" />
+                <TextInput
+                  style={[stylesx.input,{letterSpacing:5}]}
+                  placeholder="123456"
+                  placeholderTextColor="#9a9aae"
+                  value={signupData.verificationCode}
+                  onChangeText={value => {
+                    updateSignupData('verificationCode', value.replace(/\D/g, '').slice(0, 6));
+                      updateSignupData('phoneVerified', false);
+                  }}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                />
+                <TouchableOpacity style={stylesx.secondaryButton} onPress={confirmVerificationCode} disabled={isSubmitting}>
+                  <MaterialCommunityIcons name="check-circle-outline" size={20} color="#e8546f" />
+                  <Text style={stylesx.secondaryButtonText}>
+                    {signupData.phoneVerified ? 'Verified' : 'Verify Code'}
+                  </Text>
+                </TouchableOpacity> 
+              </>
+            )}
+          </View>
+        </StepScroll>
+      </KeyboardAvoidingView>,
     );
 
   const pages = [ 
@@ -544,9 +767,9 @@ export const Auth_Signup = () => {
     renderBasicsScreen(),
     renderPhotosScreen(),
     renderBioScreen(),
-    renderInterestsScreen(),
+    // renderInterestsScreen(),
     renderLocationScreen(),
-    renderCompleteScreen(),
+    verifyPhonenumber(),
   ];
 
   return (
@@ -573,10 +796,10 @@ export const Auth_Signup = () => {
         onPageChange={index => animatePageChange(index)}
       />
 
-      {step !== 5 && step !== 6 && (
+      {step !== 5 && (
         <View style={stylesx.footer}>
           <TouchableOpacity style={stylesx.primaryButton} onPress={goNext}>
-            <Text style={stylesx.primaryButtonText}>{step === 0 ? 'Create Profile' : 'Continue'}</Text>
+            <Text style={stylesx.primaryButtonText}>Continue</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -952,6 +1175,9 @@ const stylesx = StyleSheet.create({
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 8,
+  },
+  secondaryButtonDisabled: {
+    opacity: 0.55,
   },
   secondaryButtonText: {
     color: '#e8546f',

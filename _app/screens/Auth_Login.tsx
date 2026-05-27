@@ -290,7 +290,7 @@ export const Auth_Login = () => {
           onCancel={() => setShowCreateAccountPrompt(false)}
           onCreate={() => {
             setShowCreateAccountPrompt(false);
-            navigation.navigate(namer.navigation.signup);
+            navigation.navigate(namer.navigation.signup, { phone: fullPhoneNumber});
           }}
         />
       )}
